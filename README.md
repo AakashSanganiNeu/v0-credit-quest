@@ -3,6 +3,11 @@
 PolkaScore is a web application that calculates a credit score for Polkadot wallet addresses based on on-chain activity such as staking, transfers, governance participation, and NFT badges.
 
 ![PolkaScore Screenshot](https://github.com/yourusername/polkascore/raw/main/public/screenshot.png)
+
+## 🎥 Demo Video
+
+*([Insert your demo video link here](https://drive.google.com/file/d/1mrj4UWWCjzC1CY4rWYKX5BY1RsbSIAD2/view?usp=sharing))*
+
 # DeFiQuestNFT Smart Contract
 
 The **DeFiQuestNFT** smart contract is a custom NFT (Non-Fungible Token) contract built using Solidity and deployed on the **Moonbase Alpha** network, a Polkadot parachain.
@@ -48,10 +53,6 @@ The **DeFiQuestNFT** smart contract is a custom NFT (Non-Fungible Token) contrac
 - `contracts/DeFiQuestNFT.sol` — Smart contract
 - `README.md` — Project details
 - `demo/` — (optional) Deployment/minting video or screenshots
-
-## 🎥 Demo Video
-
-*(Insert your demo video link here)*
 
 Shows:
 - Deploying the contract
