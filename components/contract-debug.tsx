@@ -18,7 +18,7 @@ export function ContractDebug() {
   const [contractDetails, setContractDetails] = useState<any>(null)
 
   useEffect(() => {
-    setContractAddress(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "Not set")
+    setContractAddress(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xbfba3bca253b48b3f3f79fc1446ff3049082869b")
   }, [])
 
   const checkOwnership = async () => {
@@ -56,7 +56,7 @@ export function ContractDebug() {
 
       // Get contract info
       try {
-        const { ethers } = await import("ethers")
+        const ethers = await import("ethers")
         const provider = new ethers.providers.Web3Provider(window.ethereum)
         const contract = new ethers.Contract(
           contractAddress,

@@ -1,9 +1,5 @@
 import type { UserData } from "@/types/user-data"
-
-// Helper function to get a random number between min and max
-function getRandomNumber(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min
-}
+import { getSimulatedPolkadotCreditScore } from "./polkadot-score-service"
 
 // Calculate the overall score based on the formula:
 // (5 × staking) + (2 × transfers) + (3 × governance_votes) + (10 × NFT_badges)
@@ -63,89 +59,70 @@ export function calculateComponentScore(componentData: any, weight: number, maxS
   return 0
 }
 
-// Update the fetchUserData function to generate a random score between 300 and 850
+// Update the fetchUserData function to use the Polkadot credit score
 export async function fetchUserData(address: string): Promise<UserData> {
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 1500))
 
-  // Generate a random score between 300 and 850
-  const randomScore = getRandomNumber(300, 850)
+  try {
+    // Get the Polkadot credit score
+    const { score, metrics } = await getSimulatedPolkadotCreditScore(address)
 
-  // Randomize staking amount between 300-450
-  const randomStakingAmount = getRandomNumber(300, 450)
+    // Extract staking data from the metrics
+    const polkadotMetrics = metrics.find((m) => m.chain === "Polkadot") || metrics[0]
 
-  // Adjust user data to match the random score
-  // We'll create data that would roughly produce this score when calculated
-  if (randomScore > 700) {
-    // Gold tier (700+ score)
+    // Convert plancks to DOT (1 DOT = 10^10 plancks)
+    const amountStaked = Number.parseInt(polkadotMetrics.activeStake) / 10000000000
+
+    // Generate user data based on the score
+    const scoreRatio = (score - 350) / 500 // 0-1 range based on score 350-850
+
     return {
       staking: {
-        amountStaked: randomStakingAmount,
-        stakingDuration: 180,
-        validatorsNominated: 8,
+        amountStaked: Math.round(amountStaked * 10) / 10, // Round to 1 decimal place
+        stakingDuration: Math.round(scoreRatio * 365), // 0-365 days
+        validatorsNominated: polkadotMetrics.nominations || Math.round(scoreRatio * 16), // 0-16 validators
       },
       transfers: {
-        frequency: 32,
-        volume: 750,
-        uniqueRecipients: 15,
+        frequency: Math.round(scoreRatio * 50), // 0-50 transfers
+        volume: Math.round(scoreRatio * 1000), // 0-1000 DOT
+        uniqueRecipients: Math.round(scoreRatio * 20), // 0-20 recipients
       },
       governance: {
-        votesCast: 7,
-        proposalsCreated: 1,
-        delegationActivity: true,
+        votesCast: polkadotMetrics.democracyVotes || Math.round(scoreRatio * 10), // 0-10 votes
+        proposalsCreated: Math.round(scoreRatio * 2), // 0-2 proposals
+        delegationActivity: scoreRatio > 0.5, // Active if score > 600
       },
       nftBadges: {
-        badgesOwned: 3,
+        badgesOwned: Math.round(scoreRatio * 5), // 0-5 badges
+        rareBadges: Math.round(scoreRatio * 2), // 0-2 rare badges
+        badgeAge: Math.round(scoreRatio * 180), // 0-180 days
+      },
+    }
+  } catch (error) {
+    console.error("Error fetching Polkadot credit score:", error)
+
+    // Fallback to default data if there's an error
+    return {
+      staking: {
+        amountStaked: 250,
+        stakingDuration: 120,
+        validatorsNominated: 5,
+      },
+      transfers: {
+        frequency: 15,
+        volume: 350,
+        uniqueRecipients: 8,
+      },
+      governance: {
+        votesCast: 4,
+        proposalsCreated: 0,
+        delegationActivity: false,
+      },
+      nftBadges: {
+        badgesOwned: 2,
         rareBadges: 1,
-        badgeAge: 90,
-      },
-    }
-  } else if (randomScore > 500) {
-    // Silver tier (500-700 score)
-    return {
-      staking: {
-        amountStaked: randomStakingAmount,
-        stakingDuration: 45,
-        validatorsNominated: 2,
-      },
-      transfers: {
-        frequency: 10,
-        volume: 200,
-        uniqueRecipients: 5,
-      },
-      governance: {
-        votesCast: 1,
-        proposalsCreated: 0,
-        delegationActivity: false,
-      },
-      nftBadges: {
-        badgesOwned: 1,
-        rareBadges: 0,
-        badgeAge: 15,
-      },
-    }
-  } else {
-    // Bronze tier (300-500 score)
-    return {
-      staking: {
-        amountStaked: randomStakingAmount,
-        stakingDuration: 15,
-        validatorsNominated: 1,
-      },
-      transfers: {
-        frequency: 5,
-        volume: 100,
-        uniqueRecipients: 3,
-      },
-      governance: {
-        votesCast: 0,
-        proposalsCreated: 0,
-        delegationActivity: false,
-      },
-      nftBadges: {
-        badgesOwned: 0,
-        rareBadges: 0,
-        badgeAge: 0,
+        badgeAge: 60,
       },
     }
   }

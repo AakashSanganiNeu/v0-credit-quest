@@ -22,7 +22,7 @@ export function ContractTest() {
       }
 
       // Import ethers dynamically to avoid SSR issues
-      const { ethers } = await import("ethers")
+      const ethers = await import("ethers")
 
       // Get the contract address from environment variable
       const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"

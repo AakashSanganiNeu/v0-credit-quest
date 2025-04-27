@@ -9,15 +9,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { BADGE_TIERS } from "@/lib/constants"
 import { mintNFTBadge } from "@/lib/nft-service"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface MintNFTProps {
   score: number
   walletAddress: string
   onMint: (badgeType: string) => void
   mintedBadges: string[]
+  isLoading?: boolean
 }
 
-export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: MintNFTProps) {
+export function MintNFT({ score, walletAddress, onMint, mintedBadges = [], isLoading = false }: MintNFTProps) {
   const [minting, setMinting] = useState(false)
   const [selectedBadge, setSelectedBadge] = useState<string | null>(null)
   const [txHash, setTxHash] = useState<string | null>(null)
@@ -45,7 +47,7 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
       // Default to bronze if no badges are available
       setSelectedBadge("bronze")
     }
-  }, [score, mintedBadges])
+  }, [score, mintedBadges, availableBadges])
 
   const handleMint = async () => {
     if (!selectedBadge) return
@@ -127,6 +129,27 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
 
   const selectedBadgeData = selectedBadge ? badges.find((b) => b.id === selectedBadge) : badges[0]
 
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Mint Your Score as NFT</CardTitle>
+          <CardDescription>Create a permanent record of your PolkaScore on Moonbase</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Skeleton className="h-10 w-full" />
+        </CardFooter>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -187,7 +210,7 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
                       <Check className="size-3 text-white" />
                     </span>
                   )}
-                  {!isAvailable && (
+                  {!isAvailable && !isMinted && (
                     <span className="absolute -top-1 -right-1 size-4 bg-gray-500 rounded-full flex items-center justify-center">
                       <Lock className="size-3 text-white" />
                     </span>
@@ -244,7 +267,7 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
                       </ul>
                     </div>
 
-                    {!isAvailable && (
+                    {!isAvailable && !isMinted && (
                       <div className="p-4 bg-muted/80 rounded-lg border border-dashed">
                         <h4 className="font-medium flex items-center gap-2">
                           <Lock className="size-4" />
@@ -253,6 +276,18 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
                         <p className="text-sm text-muted-foreground mt-1">
                           You need a score of at least {badge.minScore} to mint this badge. You're{" "}
                           {badge.minScore - score} points away.
+                        </p>
+                      </div>
+                    )}
+
+                    {isMinted && (
+                      <div className="p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                        <h4 className="font-medium flex items-center gap-2 text-green-500">
+                          <Check className="size-4" />
+                          Badge Already Minted
+                        </h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          You've already minted this badge. You can view it in your NFT collection.
                         </p>
                       </div>
                     )}

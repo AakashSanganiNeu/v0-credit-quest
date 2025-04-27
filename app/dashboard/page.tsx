@@ -11,7 +11,8 @@ import { UserNFTs } from "@/components/user-nfts"
 import { MintingGuide } from "@/components/minting-guide"
 import { Skeleton } from "@/components/ui/skeleton"
 import { fetchUserData } from "@/lib/score-calculator"
-import { getNFTCount } from "@/lib/nft-service"
+import { getNFTCount, getUserMintedBadgeTypes } from "@/lib/nft-service"
+import { getSimulatedPolkadotCreditScore } from "@/lib/polkadot-score-service"
 import type { UserData } from "@/types/user-data"
 import { ContractDebug } from "@/components/contract-debug"
 import { ContractTest } from "@/components/contract-test"
@@ -21,6 +22,7 @@ import { StakingGrid } from "@/components/staking-grid"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertTriangle } from "lucide-react"
+import { PolkadotScoreDetails } from "@/components/polkadot-score-details"
 
 export default function Dashboard() {
   const searchParams = useSearchParams()
@@ -31,7 +33,18 @@ export default function Dashboard() {
   const [score, setScore] = useState<number>(0)
   const [nftCount, setNftCount] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
+  const [isMetaMaskAvailable, setIsMetaMaskAvailable] = useState<boolean>(false)
+  const [loadingNFTs, setLoadingNFTs] = useState<boolean>(false)
+  const [polkadotMetrics, setPolkadotMetrics] = useState<any>(null)
 
+  // Check if MetaMask is available
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsMetaMaskAvailable(!!window.ethereum)
+    }
+  }, [])
+
+  // Load user data and score
   useEffect(() => {
     const loadData = async () => {
       if (!walletAddress) return
@@ -40,21 +53,24 @@ export default function Dashboard() {
       setError(null)
 
       try {
-        // In a real app, this would fetch actual blockchain data
+        // Get the Polkadot credit score
+        const { score: polkadotScore, metrics } = await getSimulatedPolkadotCreditScore(walletAddress)
+        setScore(polkadotScore)
+        setPolkadotMetrics(metrics)
+
+        // Fetch user data based on the score
         const data = await fetchUserData(walletAddress)
         setUserData(data)
 
-        // Generate a random score between 300 and 850
-        const randomScore = Math.floor(Math.random() * (850 - 300 + 1)) + 300
-        setScore(randomScore)
-
-        // Get the NFT count
-        try {
-          const count = await getNFTCount()
-          setNftCount(count)
-        } catch (nftError) {
-          console.error("Error getting NFT count:", nftError)
-          // Don't set an error, just log it and continue
+        // Get the NFT count only if MetaMask is available
+        if (isMetaMaskAvailable) {
+          try {
+            const count = await getNFTCount()
+            setNftCount(count)
+          } catch (nftError) {
+            console.error("Error getting NFT count:", nftError)
+            // Don't set an error, just log it and continue
+          }
         }
       } catch (error: any) {
         console.error("Error fetching user data:", error)
@@ -65,10 +81,34 @@ export default function Dashboard() {
     }
 
     loadData()
-  }, [walletAddress])
+  }, [walletAddress, isMetaMaskAvailable])
+
+  // Load minted badges from blockchain
+  useEffect(() => {
+    const loadMintedBadges = async () => {
+      if (!isMetaMaskAvailable || !walletAddress) return
+
+      setLoadingNFTs(true)
+      try {
+        // Get the user's minted badge types from the blockchain
+        const badgeTypes = await getUserMintedBadgeTypes()
+        setMintedBadges(badgeTypes)
+        console.log("Loaded minted badges:", badgeTypes)
+      } catch (error) {
+        console.error("Error loading minted badges:", error)
+      } finally {
+        setLoadingNFTs(false)
+      }
+    }
+
+    loadMintedBadges()
+  }, [isMetaMaskAvailable, walletAddress])
 
   const handleMintBadge = (badgeType: string) => {
-    setMintedBadges((prev) => [...prev, badgeType])
+    setMintedBadges((prev) => {
+      if (prev.includes(badgeType)) return prev
+      return [...prev, badgeType]
+    })
     setNftCount((prev) => prev + 1)
   }
 
@@ -98,6 +138,15 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {!isMetaMaskAvailable && (
+          <Alert className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              MetaMask is not installed or not connected. Some features like NFT minting will not be available.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertTriangle className="h-4 w-4" />
@@ -123,19 +172,24 @@ export default function Dashboard() {
                   walletAddress={walletAddress}
                   onMint={handleMintBadge}
                   mintedBadges={mintedBadges}
+                  isLoading={loadingNFTs}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <MintingGuide />
-              <UserNFTs />
-            </div>
+            {polkadotMetrics && <PolkadotScoreDetails metrics={polkadotMetrics} />}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <ContractTest />
-              <ContractDebug />
+              <MintingGuide />
+              {isMetaMaskAvailable && <UserNFTs />}
             </div>
+
+            {isMetaMaskAvailable && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <ContractTest />
+                <ContractDebug />
+              </div>
+            )}
 
             <Tabs defaultValue="staking" className="w-full">
               <TabsList className="grid w-full grid-cols-3">

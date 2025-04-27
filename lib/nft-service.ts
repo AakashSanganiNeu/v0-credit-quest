@@ -23,7 +23,7 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
     }
 
     // Import ethers dynamically to avoid SSR issues
-    const { ethers } = await import("ethers")
+    const ethers = await import("ethers")
 
     // Request account access
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
@@ -33,7 +33,7 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
 
     const userAddress = accounts[0]
 
-    // Create a provider
+    // Create a provider - using ethers v5 syntax
     const provider = new ethers.providers.Web3Provider(window.ethereum)
 
     // Get the network to verify we're on the right chain
@@ -126,9 +126,9 @@ export async function getNFTCount(): Promise<number> {
     }
 
     // Import ethers dynamically to avoid SSR issues
-    const { ethers } = await import("ethers")
+    const ethers = await import("ethers")
 
-    // Create a provider
+    // Create a provider - using ethers v5 syntax
     const provider = new ethers.providers.Web3Provider(window.ethereum)
 
     // Create contract instance (read-only)
@@ -201,10 +201,14 @@ export async function fetchUserNFTs() {
 
   try {
     // Import ethers dynamically to avoid SSR issues
-    const { ethers } = await import("ethers")
+    const ethers = await import("ethers")
 
     // Connect to MetaMask
     const provider = new ethers.providers.Web3Provider(window.ethereum)
+
+    // Request account access if needed
+    await window.ethereum.request({ method: "eth_requestAccounts" })
+
     const signer = provider.getSigner()
     const userAddress = await signer.getAddress()
 
@@ -262,7 +266,7 @@ export async function isContractOwner(): Promise<boolean> {
 
   try {
     // Import ethers dynamically to avoid SSR issues
-    const { ethers } = await import("ethers")
+    const ethers = await import("ethers")
 
     // Connect to MetaMask
     const provider = new ethers.providers.Web3Provider(window.ethereum)
@@ -303,7 +307,7 @@ export async function getContractDetails() {
 
   try {
     // Import ethers dynamically to avoid SSR issues
-    const { ethers } = await import("ethers")
+    const ethers = await import("ethers")
 
     // Connect to MetaMask
     const provider = new ethers.providers.Web3Provider(window.ethereum)
@@ -325,5 +329,35 @@ export async function getContractDetails() {
   } catch (error) {
     console.error("Error getting contract details:", error)
     return null
+  }
+}
+
+// Add this function to determine which badge types a user has already minted
+export async function getUserMintedBadgeTypes(): Promise<string[]> {
+  try {
+    if (!isBrowser || !window.ethereum) {
+      return []
+    }
+
+    const userNFTs = await fetchUserNFTs()
+    const mintedBadgeTypes: string[] = []
+
+    // Determine badge type from token URI
+    userNFTs.forEach((nft) => {
+      const uri = nft.tokenUri.toLowerCase()
+      if (uri.includes("bronze")) {
+        mintedBadgeTypes.push("bronze")
+      } else if (uri.includes("silver")) {
+        mintedBadgeTypes.push("silver")
+      } else if (uri.includes("gold")) {
+        mintedBadgeTypes.push("gold")
+      }
+    })
+
+    // Remove duplicates
+    return [...new Set(mintedBadgeTypes)]
+  } catch (error) {
+    console.error("Error getting user minted badge types:", error)
+    return []
   }
 }
