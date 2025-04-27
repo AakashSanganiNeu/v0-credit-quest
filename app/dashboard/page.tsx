@@ -88,12 +88,15 @@ export default function Dashboard() {
     const loadMintedBadges = async () => {
       if (!isMetaMaskAvailable || !walletAddress) return
 
+      // Reset minted badges when address changes
+      setMintedBadges([])
       setLoadingNFTs(true)
+
       try {
         // Get the user's minted badge types from the blockchain
         const badgeTypes = await getUserMintedBadgeTypes()
         setMintedBadges(badgeTypes)
-        console.log("Loaded minted badges:", badgeTypes)
+        console.log("Loaded minted badges for address:", walletAddress, badgeTypes)
       } catch (error) {
         console.error("Error loading minted badges:", error)
       } finally {

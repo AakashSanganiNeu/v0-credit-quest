@@ -211,6 +211,7 @@ export async function fetchUserNFTs() {
 
     const signer = provider.getSigner()
     const userAddress = await signer.getAddress()
+    console.log("Fetching NFTs for address:", userAddress)
 
     // Create contract instance
     const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
@@ -252,6 +253,7 @@ export async function fetchUserNFTs() {
       }
     }
 
+    console.log(`Found ${userNFTs.length} NFTs for address ${userAddress}`)
     return userNFTs
   } catch (error) {
     console.error("Error fetching user NFTs:", error)
@@ -338,6 +340,16 @@ export async function getUserMintedBadgeTypes(): Promise<string[]> {
     if (!isBrowser || !window.ethereum) {
       return []
     }
+
+    // Get the current wallet address
+    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
+    if (accounts.length === 0) {
+      console.log("No accounts found when checking minted badges")
+      return []
+    }
+
+    const currentAddress = accounts[0]
+    console.log("Checking minted badges for address:", currentAddress)
 
     const userNFTs = await fetchUserNFTs()
     const mintedBadgeTypes: string[] = []
