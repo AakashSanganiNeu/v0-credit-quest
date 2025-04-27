@@ -4,7 +4,7 @@ PolkaScore is a web application that calculates a credit score for Polkadot wall
 
 ## 🎥 Demo Photos
 
-*([demo video link](https://drive.google.com/drive/folders/176GyVj6nMa8KGCDddzzixIpVy-V1uAdQ?usp=sharing))*
+*([demo photos link](https://drive.google.com/drive/folders/176GyVj6nMa8KGCDddzzixIpVy-V1uAdQ?usp=sharing))*
 
 ## 🎥 Demo Video
 
