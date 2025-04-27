@@ -4,8 +4,8 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { isContractOwner, getNFTCount } from "@/lib/nft-service"
-import { AlertTriangle, Info } from "lucide-react"
+import { isContractOwner, getNFTCount, getContractDetails } from "@/lib/nft-service"
+import { AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react"
 
 export function ContractDebug() {
   const [isOwner, setIsOwner] = useState<boolean | null>(null)
@@ -15,6 +15,7 @@ export function ContractDebug() {
   const [error, setError] = useState<string | null>(null)
   const [nftCount, setNftCount] = useState<number | null>(null)
   const [contractInfo, setContractInfo] = useState<any>(null)
+  const [contractDetails, setContractDetails] = useState<any>(null)
 
   useEffect(() => {
     setContractAddress(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "Not set")
@@ -36,6 +37,10 @@ export function ContractDebug() {
       }
 
       setUserAddress(accounts[0])
+
+      // Get contract details
+      const details = await getContractDetails()
+      setContractDetails(details)
 
       // Check if user is contract owner
       const owner = await isContractOwner()
@@ -148,6 +153,29 @@ export function ContractDebug() {
               </>
             )}
           </div>
+
+          {contractDetails && (
+            <div className="p-4 bg-muted rounded-lg">
+              <h3 className="font-medium mb-2">Network Details</h3>
+              <p className="text-sm">
+                <span className="font-medium">Network:</span> {contractDetails.network.name || "Unknown"} (Chain ID:{" "}
+                {contractDetails.network.chainId})
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-sm font-medium">Contract Deployed:</span>
+                {contractDetails.hasCode ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-500" />
+                )}
+              </div>
+              {contractDetails.hasCode && (
+                <p className="text-sm">
+                  <span className="font-medium">Code Size:</span> {contractDetails.codeLength} bytes
+                </p>
+              )}
+            </div>
+          )}
 
           {error && (
             <Alert variant="destructive">

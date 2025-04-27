@@ -8,12 +8,18 @@ import { ScoreBreakdown } from "@/components/score-breakdown"
 import { ScoreRecommendations } from "@/components/score-recommendations"
 import { MintNFT } from "@/components/mint-nft"
 import { UserNFTs } from "@/components/user-nfts"
+import { MintingGuide } from "@/components/minting-guide"
 import { Skeleton } from "@/components/ui/skeleton"
 import { fetchUserData } from "@/lib/score-calculator"
 import { getNFTCount } from "@/lib/nft-service"
 import type { UserData } from "@/types/user-data"
 import { ContractDebug } from "@/components/contract-debug"
+import { ContractTest } from "@/components/contract-test"
+import { TransferGrid } from "@/components/transfer-grid"
+import { GovernanceGrid } from "@/components/governance-grid"
+import { StakingGrid } from "@/components/staking-grid"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AlertTriangle } from "lucide-react"
 
 export default function Dashboard() {
@@ -121,9 +127,32 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <UserNFTs />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <MintingGuide />
+              <UserNFTs />
+            </div>
 
-            <ContractDebug />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <ContractTest />
+              <ContractDebug />
+            </div>
+
+            <Tabs defaultValue="staking" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="staking">Staking</TabsTrigger>
+                <TabsTrigger value="transfers">Transfers</TabsTrigger>
+                <TabsTrigger value="governance">Governance</TabsTrigger>
+              </TabsList>
+              <TabsContent value="staking" className="pt-6">
+                <StakingGrid userData={userData} />
+              </TabsContent>
+              <TabsContent value="transfers" className="pt-6">
+                <TransferGrid userData={userData} />
+              </TabsContent>
+              <TabsContent value="governance" className="pt-6">
+                <GovernanceGrid userData={userData} />
+              </TabsContent>
+            </Tabs>
 
             <ScoreBreakdown userData={userData} />
             <ScoreRecommendations userData={userData} />

@@ -1,10 +1,10 @@
 import contractABI from "./DeFiQuestNFT.json"
 
-// Contract address from environment variable
+// Contract address from environment variable or use the new address directly
 const CONTRACT_ADDRESS =
   typeof window !== "undefined"
-    ? process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0x55c28Dd0C73bCB183abE5659f33420F9a0442C73"
-    : "0x55c28Dd0C73bCB183abE5659f33420F9a0442C73"
+    ? process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
+    : "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
 
 // Badge metadata URIs (in a real app, these would be IPFS links)
 const BADGE_URIS = {
@@ -36,8 +36,21 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
     // Create a provider
     const provider = new ethers.providers.Web3Provider(window.ethereum)
 
+    // Get the network to verify we're on the right chain
+    const network = await provider.getNetwork()
+    console.log("Connected to network:", network)
+
     // Get the signer
     const signer = provider.getSigner()
+
+    // Verify the contract exists on this network
+    const code = await provider.getCode(CONTRACT_ADDRESS)
+    if (code === "0x") {
+      throw new Error(
+        `No contract found at address ${CONTRACT_ADDRESS} on this network. Please check your network connection.`,
+      )
+    }
+    console.log("Contract exists at address:", CONTRACT_ADDRESS)
 
     // Create contract instance
     const nftContract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer)
@@ -48,10 +61,31 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
       throw new Error("Invalid badge type")
     }
 
-    // Call the mintBadge function
+    // Try to get the token count to verify contract interaction works
+    try {
+      const tokenCount = await nftContract.tokenCount()
+      console.log("Current token count:", tokenCount.toString())
+    } catch (error) {
+      console.warn("Could not get token count, but continuing:", error)
+    }
+
+    // Call the mintBadge function with more detailed error handling
     console.log(`Minting ${badgeType} badge for ${userAddress} with URI ${badgeUri}`)
+
+    // Estimate gas first to check if the transaction will fail
+    try {
+      const gasEstimate = await nftContract.estimateGas.mintBadge(userAddress, badgeUri)
+      console.log("Gas estimate:", gasEstimate.toString())
+    } catch (error: any) {
+      console.error("Gas estimation failed:", error)
+      // Try to extract a more meaningful error message
+      const errorMessage = error.error?.message || error.message || "Transaction would fail"
+      throw new Error(`Transaction would fail: ${errorMessage}`)
+    }
+
+    // Send the transaction with explicit parameters
     const tx = await nftContract.mintBadge(userAddress, badgeUri, {
-      gasLimit: 300000, // Explicitly set gas limit
+      gasLimit: 500000, // Increased gas limit
     })
 
     console.log("Transaction sent:", tx.hash)
@@ -66,9 +100,21 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
     }
   } catch (error: any) {
     console.error("Error minting NFT:", error)
+
+    // Try to extract a more meaningful error message
+    let errorMessage = "Failed to mint NFT"
+
+    if (error.error?.message) {
+      errorMessage = error.error.message
+    } else if (error.message) {
+      errorMessage = error.message
+    } else if (typeof error === "string") {
+      errorMessage = error
+    }
+
     return {
       success: false,
-      error: error.message || "Failed to mint NFT",
+      error: errorMessage,
     }
   }
 }
@@ -246,5 +292,38 @@ export async function isContractOwner(): Promise<boolean> {
   } catch (error) {
     console.error("Error checking contract owner:", error)
     return false
+  }
+}
+
+// Add a function to check contract details
+export async function getContractDetails() {
+  if (!isBrowser || !window.ethereum) {
+    return null
+  }
+
+  try {
+    // Import ethers dynamically to avoid SSR issues
+    const { ethers } = await import("ethers")
+
+    // Connect to MetaMask
+    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    const network = await provider.getNetwork()
+
+    // Get the code at the contract address
+    const code = await provider.getCode(CONTRACT_ADDRESS)
+    const hasCode = code !== "0x"
+
+    return {
+      address: CONTRACT_ADDRESS,
+      network: {
+        name: network.name,
+        chainId: network.chainId,
+      },
+      hasCode,
+      codeLength: code.length,
+    }
+  } catch (error) {
+    console.error("Error getting contract details:", error)
+    return null
   }
 }
