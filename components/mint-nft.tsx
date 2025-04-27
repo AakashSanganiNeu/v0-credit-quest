@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CircleDashed, Download, Check } from "lucide-react"
+import { CircleDashed, Download, Check, Lock } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BADGE_TIERS } from "@/lib/constants"
 
@@ -17,7 +17,7 @@ interface MintNFTProps {
 
 export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: MintNFTProps) {
   const [minting, setMinting] = useState(false)
-  const [selectedBadge, setSelectedBadge] = useState<string>("bronze")
+  const [selectedBadge, setSelectedBadge] = useState<string | null>(null)
   const nftRef = useRef<HTMLDivElement>(null)
 
   const badges = [BADGE_TIERS.BRONZE, BADGE_TIERS.SILVER, BADGE_TIERS.GOLD]
@@ -25,7 +25,27 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
   // Determine which badges are available based on score
   const availableBadges = badges.filter((badge) => score >= badge.minScore)
 
+  // Set the default selected badge based on the highest available tier
+  useEffect(() => {
+    if (availableBadges.length > 0) {
+      // Find the highest tier badge that's available but not minted yet
+      const unmintedBadges = availableBadges.filter((badge) => !mintedBadges.includes(badge.id))
+      if (unmintedBadges.length > 0) {
+        // Select the highest tier unminted badge
+        setSelectedBadge(unmintedBadges[unmintedBadges.length - 1].id)
+      } else {
+        // If all available badges are minted, select the highest tier
+        setSelectedBadge(availableBadges[availableBadges.length - 1].id)
+      }
+    } else {
+      // Default to bronze if no badges are available
+      setSelectedBadge("bronze")
+    }
+  }, [score, mintedBadges])
+
   const handleMint = () => {
+    if (!selectedBadge) return
+
     setMinting(true)
 
     // Simulate minting process
@@ -37,7 +57,7 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
 
   // Function to download NFT as image
   const downloadNFT = () => {
-    if (!nftRef.current) return
+    if (!nftRef.current || !selectedBadge) return
 
     // We're using a simple approach to create an image from HTML
     const nftElement = nftRef.current
@@ -89,7 +109,7 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
     }
   }
 
-  const selectedBadgeData = badges.find((b) => b.id === selectedBadge) || badges[0]
+  const selectedBadgeData = selectedBadge ? badges.find((b) => b.id === selectedBadge) : badges[0]
 
   return (
     <Card>
@@ -98,75 +118,111 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
         <CardDescription>Create a permanent record of your PolkaScore on Asset Hub</CardDescription>
       </CardHeader>
       <CardContent>
-        <Tabs
-          defaultValue={availableBadges.length > 0 ? availableBadges[0].id : "bronze"}
-          onValueChange={setSelectedBadge}
-          className="mb-6"
-        >
+        <div className="mb-4 p-4 bg-muted rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium">Your Current Score</h3>
+              <p className="text-3xl font-bold">{score}</p>
+            </div>
+            <div className="text-right">
+              <h3 className="font-medium">Available Badges</h3>
+              <div className="flex gap-2 mt-1 justify-end">
+                {score >= 300 && <span className="text-xl">🥉</span>}
+                {score >= 500 && <span className="text-xl">🥈</span>}
+                {score >= 700 && <span className="text-xl">🥇</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Tabs value={selectedBadge || "bronze"} onValueChange={setSelectedBadge} className="mb-6">
           <TabsList className="grid grid-cols-3">
-            {badges.map((badge) => (
-              <TabsTrigger
-                key={badge.id}
-                value={badge.id}
-                disabled={score < badge.minScore}
-                className={mintedBadges.includes(badge.id) ? "relative" : ""}
-              >
-                {badge.name}
-                {mintedBadges.includes(badge.id) && (
-                  <span className="absolute -top-1 -right-1 size-4 bg-green-500 rounded-full flex items-center justify-center">
-                    <Check className="size-3 text-white" />
-                  </span>
-                )}
-              </TabsTrigger>
-            ))}
+            {badges.map((badge) => {
+              const isMinted = mintedBadges.includes(badge.id)
+              const isAvailable = score >= badge.minScore
+
+              return (
+                <TabsTrigger key={badge.id} value={badge.id} disabled={!isAvailable} className="relative">
+                  {badge.name}
+                  {isMinted && (
+                    <span className="absolute -top-1 -right-1 size-4 bg-green-500 rounded-full flex items-center justify-center">
+                      <Check className="size-3 text-white" />
+                    </span>
+                  )}
+                  {!isAvailable && (
+                    <span className="absolute -top-1 -right-1 size-4 bg-gray-500 rounded-full flex items-center justify-center">
+                      <Lock className="size-3 text-white" />
+                    </span>
+                  )}
+                </TabsTrigger>
+              )
+            })}
           </TabsList>
 
-          {badges.map((badge) => (
-            <TabsContent key={badge.id} value={badge.id} className="pt-4">
-              <div className="flex flex-col md:flex-row gap-8 items-center">
-                <div
-                  ref={nftRef}
-                  className={`relative aspect-square w-full max-w-[240px] rounded-lg ${badge.color} p-1`}
-                >
-                  <div className="absolute inset-0 bg-card m-[3px] rounded-[6px]"></div>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-                    <div className="text-sm font-medium text-muted-foreground mb-1">PolkaScore</div>
-                    <div className="text-5xl font-bold mb-2">{score}</div>
-                    <div className="text-4xl mb-2">{badge.icon}</div>
-                    <Badge className={`${badge.color} ${badge.textColor} mb-4`}>{badge.name}</Badge>
-                    <div className="text-xs text-muted-foreground">
-                      Wallet: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">{new Date().toLocaleDateString()}</div>
-                  </div>
-                </div>
+          {badges.map((badge) => {
+            const isAvailable = score >= badge.minScore
+            const isMinted = mintedBadges.includes(badge.id)
 
-                <div className="flex-1 space-y-4">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-medium">{badge.name} Badge Benefits</h3>
-                    <ul className="space-y-2">
-                      <li className="flex items-start gap-2">
-                        <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
-                        <span>Permanent record of your {badge.name} tier achievement</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
-                        <span>Showcase your blockchain reputation to DeFi protocols</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
-                        <span>Access to {badge.name}-tier benefits in partner protocols</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
-                        <span>Historical tracking of your score improvements</span>
-                      </li>
-                    </ul>
+            return (
+              <TabsContent key={badge.id} value={badge.id} className="pt-4">
+                <div className="flex flex-col md:flex-row gap-8 items-center">
+                  <div
+                    ref={nftRef}
+                    className={`relative aspect-square w-full max-w-[240px] rounded-lg ${badge.color} p-1`}
+                  >
+                    <div className="absolute inset-0 bg-card m-[3px] rounded-[6px]"></div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                      <div className="text-sm font-medium text-muted-foreground mb-1">PolkaScore</div>
+                      <div className="text-5xl font-bold mb-2">{score}</div>
+                      <div className="text-4xl mb-2">{badge.icon}</div>
+                      <Badge className={`${badge.color} ${badge.textColor} mb-4`}>{badge.name}</Badge>
+                      <div className="text-xs text-muted-foreground">
+                        Wallet: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">{new Date().toLocaleDateString()}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex-1 space-y-4">
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-medium">{badge.name} Badge Benefits</h3>
+                      <ul className="space-y-2">
+                        <li className="flex items-start gap-2">
+                          <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
+                          <span>Permanent record of your {badge.name} tier achievement</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
+                          <span>Showcase your blockchain reputation to DeFi protocols</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
+                          <span>Access to {badge.name}-tier benefits in partner protocols</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
+                          <span>Historical tracking of your score improvements</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {!isAvailable && (
+                      <div className="p-4 bg-muted/80 rounded-lg border border-dashed">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Lock className="size-4" />
+                          Badge Locked
+                        </h4>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          You need a score of at least {badge.minScore} to mint this badge. You're{" "}
+                          {badge.minScore - score} points away.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            </TabsContent>
-          ))}
+              </TabsContent>
+            )
+          })}
         </Tabs>
       </CardContent>
       <CardFooter className="flex justify-center md:justify-end gap-4">
@@ -176,21 +232,27 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
         </Button>
         <Button
           onClick={handleMint}
-          disabled={minting || score < selectedBadgeData.minScore || mintedBadges.includes(selectedBadge)}
-          className={`${selectedBadgeData.color} hover:opacity-90 transition-opacity`}
+          disabled={
+            minting ||
+            !selectedBadge ||
+            !selectedBadgeData ||
+            score < (selectedBadgeData?.minScore || 0) ||
+            mintedBadges.includes(selectedBadge)
+          }
+          className={`${selectedBadgeData?.color || ""} hover:opacity-90 transition-opacity`}
         >
           {minting ? (
             <>
               <CircleDashed className="mr-2 h-4 w-4 animate-spin" />
               Minting...
             </>
-          ) : mintedBadges.includes(selectedBadge) ? (
+          ) : mintedBadges.includes(selectedBadge || "") ? (
             <>
               <Check className="mr-2 h-4 w-4" />
               Already Minted
             </>
           ) : (
-            `Mint ${selectedBadgeData.name} Badge`
+            `Mint ${selectedBadgeData?.name || ""} Badge`
           )}
         </Button>
       </CardFooter>

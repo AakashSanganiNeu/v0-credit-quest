@@ -1,5 +1,10 @@
 import type { UserData } from "@/types/user-data"
 
+// Helper function to get a random number between min and max
+function getRandomNumber(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
 // Calculate the overall score based on the formula:
 // (5 × staking) + (2 × transfers) + (3 × governance_votes) + (10 × NFT_badges)
 export function calculateScore(userData: UserData): number {
@@ -58,29 +63,21 @@ export function calculateComponentScore(componentData: any, weight: number, maxS
   return 0
 }
 
-// Helper function to get a random number between min and max
-function getRandomNumber(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min
-}
-
-// Update the fetchUserData function to work with Ethereum addresses
+// Update the fetchUserData function to generate a random score between 300 and 850
 export async function fetchUserData(address: string): Promise<UserData> {
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 1500))
 
+  // Generate a random score between 300 and 850
+  const randomScore = getRandomNumber(300, 850)
+
   // Randomize staking amount between 300-450
   const randomStakingAmount = getRandomNumber(300, 450)
 
-  // Generate a deterministic score based on the address
-  // This is just for demo purposes - in a real app, you'd fetch real data
-  const addressSum = address
-    .toLowerCase()
-    .split("")
-    .reduce((sum, char) => sum + char.charCodeAt(0), 0)
-
-  // Use the address sum to determine the tier
-  // Gold tier addresses (700+ score)
-  if (address.toLowerCase() === "0x742d35cc6634c0532925a3b844bc454e4438f44e" || addressSum % 1000 > 700) {
+  // Adjust user data to match the random score
+  // We'll create data that would roughly produce this score when calculated
+  if (randomScore > 700) {
+    // Gold tier (700+ score)
     return {
       staking: {
         amountStaked: randomStakingAmount,
@@ -103,10 +100,8 @@ export async function fetchUserData(address: string): Promise<UserData> {
         badgeAge: 90,
       },
     }
-  }
-
-  // Silver tier addresses (500-700 score)
-  if (address.toLowerCase() === "0x8b3392483ba26d65e331db86d4f430ae2f14c4b4" || addressSum % 1000 > 500) {
+  } else if (randomScore > 500) {
+    // Silver tier (500-700 score)
     return {
       staking: {
         amountStaked: randomStakingAmount,
@@ -129,10 +124,8 @@ export async function fetchUserData(address: string): Promise<UserData> {
         badgeAge: 15,
       },
     }
-  }
-
-  // Bronze tier addresses (300-500 score)
-  if (address.toLowerCase() === "0x3f579f097f2ce8696ae8c417582cfafde9ec9966" || addressSum % 1000 > 300) {
+  } else {
+    // Bronze tier (300-500 score)
     return {
       staking: {
         amountStaked: randomStakingAmount,
@@ -155,29 +148,5 @@ export async function fetchUserData(address: string): Promise<UserData> {
         badgeAge: 0,
       },
     }
-  }
-
-  // Default case - low score
-  return {
-    staking: {
-      amountStaked: randomStakingAmount,
-      stakingDuration: 10,
-      validatorsNominated: 1,
-    },
-    transfers: {
-      frequency: 3,
-      volume: 50,
-      uniqueRecipients: 2,
-    },
-    governance: {
-      votesCast: 0,
-      proposalsCreated: 0,
-      delegationActivity: false,
-    },
-    nftBadges: {
-      badgesOwned: 0,
-      rareBadges: 0,
-      badgeAge: 0,
-    },
   }
 }

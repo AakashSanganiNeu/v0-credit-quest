@@ -9,7 +9,7 @@ import { ScoreRecommendations } from "@/components/score-recommendations"
 import { MintNFT } from "@/components/mint-nft"
 import { BadgeDisplay } from "@/components/badge-display"
 import { Skeleton } from "@/components/ui/skeleton"
-import { calculateScore, fetchUserData } from "@/lib/score-calculator"
+import { fetchUserData } from "@/lib/score-calculator"
 import type { UserData } from "@/types/user-data"
 
 export default function Dashboard() {
@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const [mintedBadges, setMintedBadges] = useState<string[]>([])
+  const [score, setScore] = useState<number>(0)
 
   useEffect(() => {
     const loadData = async () => {
@@ -28,6 +29,10 @@ export default function Dashboard() {
         // In a real app, this would fetch actual blockchain data
         const data = await fetchUserData(walletAddress)
         setUserData(data)
+
+        // Generate a random score between 300 and 850
+        const randomScore = Math.floor(Math.random() * (850 - 300 + 1)) + 300
+        setScore(randomScore)
       } catch (error) {
         console.error("Error fetching user data:", error)
       } finally {
@@ -73,16 +78,11 @@ export default function Dashboard() {
           </div>
         ) : userData ? (
           <div className="space-y-8">
-            <BadgeDisplay score={calculateScore(userData)} mintedBadges={mintedBadges} />
-            <ScoreOverview score={calculateScore(userData)} />
+            <BadgeDisplay score={score} mintedBadges={mintedBadges} />
+            <ScoreOverview score={score} />
             <ScoreBreakdown userData={userData} />
             <ScoreRecommendations userData={userData} />
-            <MintNFT
-              score={calculateScore(userData)}
-              walletAddress={walletAddress}
-              onMint={handleMintBadge}
-              mintedBadges={mintedBadges}
-            />
+            <MintNFT score={score} walletAddress={walletAddress} onMint={handleMintBadge} mintedBadges={mintedBadges} />
           </div>
         ) : (
           <div className="text-center py-16">
