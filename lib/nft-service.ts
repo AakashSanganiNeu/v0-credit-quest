@@ -13,6 +13,9 @@ const BADGE_URIS = {
 // Check if we're in a browser environment
 const isBrowser = typeof window !== "undefined"
 
+// Simple ethers.js import - for Vercel compatibility
+let ethers: any = null
+
 // Helper function to safely get ethers provider
 async function getEthersProvider() {
   if (!isBrowser || !window.ethereum) {
@@ -20,47 +23,49 @@ async function getEthersProvider() {
   }
 
   try {
-    // Import ethers dynamically to avoid SSR issues
-    const ethersModule = await import("ethers")
-    console.log("Ethers module imported successfully")
-
-    // Log available properties for debugging
-    console.log("Ethers module keys:", Object.keys(ethersModule))
-    if (ethersModule.ethers) {
-      console.log("Ethers.ethers keys:", Object.keys(ethersModule.ethers))
-      if (ethersModule.ethers.providers) {
-        console.log("Ethers.ethers.providers keys:", Object.keys(ethersModule.ethers.providers))
-      }
+    // Import ethers only once and cache it
+    if (!ethers) {
+      ethers = await import("ethers")
+      console.log("Ethers imported successfully")
     }
 
-    // Handle different ethers versions and import structures
+    // Create provider based on ethers version
     let provider
 
-    // Try ethers v5 structure
-    if (ethersModule.providers && ethersModule.providers.Web3Provider) {
-      provider = new ethersModule.providers.Web3Provider(window.ethereum)
-      console.log("Using ethers.providers.Web3Provider")
-    }
-    // Try ethers v5 nested structure
-    else if (ethersModule.ethers && ethersModule.ethers.providers && ethersModule.ethers.providers.Web3Provider) {
-      provider = new ethersModule.ethers.providers.Web3Provider(window.ethereum)
-      console.log("Using ethers.ethers.providers.Web3Provider")
-    }
-    // Try ethers v6 structure
-    else if (ethersModule.BrowserProvider) {
-      provider = new ethersModule.BrowserProvider(window.ethereum)
-      console.log("Using ethers.BrowserProvider (v6)")
-    }
-    // If none of the above work, throw an error
-    else {
-      console.error("Ethers structure:", JSON.stringify(Object.keys(ethersModule)))
-      if (ethersModule.ethers) {
-        console.error("Ethers.ethers structure:", JSON.stringify(Object.keys(ethersModule.ethers)))
+    // Try ethers v5 structure first (most common)
+    try {
+      if (ethers.providers && ethers.providers.Web3Provider) {
+        provider = new ethers.providers.Web3Provider(window.ethereum)
+        console.log("Using ethers v5 Web3Provider")
+        return provider
       }
-      throw new Error("Could not find a compatible Web3Provider in ethers.js")
+    } catch (e) {
+      console.log("Failed to use ethers.providers.Web3Provider:", e)
     }
 
-    return provider
+    // Try ethers v5 nested structure
+    try {
+      if (ethers.ethers && ethers.ethers.providers && ethers.ethers.providers.Web3Provider) {
+        provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
+        console.log("Using nested ethers v5 Web3Provider")
+        return provider
+      }
+    } catch (e) {
+      console.log("Failed to use ethers.ethers.providers.Web3Provider:", e)
+    }
+
+    // Try ethers v6 structure
+    try {
+      if (ethers.BrowserProvider) {
+        provider = new ethers.BrowserProvider(window.ethereum)
+        console.log("Using ethers v6 BrowserProvider")
+        return provider
+      }
+    } catch (e) {
+      console.log("Failed to use ethers.BrowserProvider:", e)
+    }
+
+    throw new Error("Could not find a compatible Web3Provider in ethers.js")
   } catch (error) {
     console.error("Error initializing ethers provider:", error)
     throw error
@@ -68,12 +73,13 @@ async function getEthersProvider() {
 }
 
 // Helper function to create contract instance
-async function getContract(provider, contractAddress, abi) {
-  try {
-    const ethersModule = await import("ethers")
-    console.log("Creating contract instance")
+async function getContract(provider: any, contractAddress: string, abi: any) {
+  if (!ethers) {
+    ethers = await import("ethers")
+  }
 
-    // Get signer if needed
+  try {
+    // Get signer
     let signer
     try {
       if (provider.getSigner) {
@@ -83,32 +89,37 @@ async function getContract(provider, contractAddress, abi) {
         signer = provider
         console.log("Using provider as signer")
       }
-    } catch (error) {
-      console.error("Error getting signer:", error)
-      // Fall back to using provider
+    } catch (e) {
+      console.log("Error getting signer:", e)
       signer = provider
-      console.log("Falling back to using provider as signer")
     }
 
-    // Create contract instance based on available methods
+    // Create contract instance
     let contract
-    if (ethersModule.Contract) {
-      contract = new ethersModule.Contract(contractAddress, abi, signer)
-      console.log("Created contract using ethers.Contract")
-    } else if (ethersModule.ethers && ethersModule.ethers.Contract) {
-      contract = new ethersModule.ethers.Contract(contractAddress, abi, signer)
-      console.log("Created contract using ethers.ethers.Contract")
-    } else {
-      throw new Error("Could not find Contract constructor in ethers.js")
+
+    // Try ethers v5 Contract
+    try {
+      if (ethers.Contract) {
+        contract = new ethers.Contract(contractAddress, abi, signer)
+        console.log("Created contract with ethers.Contract")
+        return contract
+      }
+    } catch (e) {
+      console.log("Failed to use ethers.Contract:", e)
     }
 
-    // Verify the contract has the mintBadge function
-    if (typeof contract.mintBadge !== "function") {
-      console.error("Contract methods:", Object.keys(contract.functions || {}))
-      throw new Error("Contract does not have mintBadge function")
+    // Try ethers v5 nested Contract
+    try {
+      if (ethers.ethers && ethers.ethers.Contract) {
+        contract = new ethers.ethers.Contract(contractAddress, abi, signer)
+        console.log("Created contract with ethers.ethers.Contract")
+        return contract
+      }
+    } catch (e) {
+      console.log("Failed to use ethers.ethers.Contract:", e)
     }
 
-    return contract
+    throw new Error("Could not create contract instance")
   } catch (error) {
     console.error("Error creating contract instance:", error)
     throw error
@@ -155,7 +166,13 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
     console.log("Contract instance created successfully")
 
     // Log available contract methods for debugging
-    console.log("Contract methods:", Object.keys(nftContract.functions || {}))
+    const contractFunctions = Object.keys(nftContract.functions || {})
+    console.log("Contract functions:", contractFunctions)
+
+    // Check if mintBadge exists
+    if (!contractFunctions.includes("mintBadge")) {
+      throw new Error("Contract does not have mintBadge function. Available functions: " + contractFunctions.join(", "))
+    }
 
     // Get the badge URI based on the badge type
     const badgeUri = BADGE_URIS[badgeType as keyof typeof BADGE_URIS]
@@ -175,24 +192,7 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
     // Call the mintBadge function with more detailed error handling
     console.log(`Minting ${badgeType} badge for ${userAddress} with URI ${badgeUri}`)
 
-    // Verify mintBadge function exists
-    if (typeof nftContract.mintBadge !== "function") {
-      console.error("Available contract functions:", Object.keys(nftContract.functions || {}))
-      throw new Error("mintBadge function not found on contract")
-    }
-
-    // Estimate gas first to check if the transaction will fail
-    try {
-      const gasEstimate = await nftContract.estimateGas.mintBadge(userAddress, badgeUri)
-      console.log("Gas estimate:", gasEstimate.toString())
-    } catch (error: any) {
-      console.error("Gas estimation failed:", error)
-      // Try to extract a more meaningful error message
-      const errorMessage = error.error?.message || error.message || "Transaction would fail"
-      throw new Error(`Transaction would fail: ${errorMessage}`)
-    }
-
-    // Send the transaction with explicit parameters
+    // Use a direct approach for calling the function
     const tx = await nftContract.mintBadge(userAddress, badgeUri, {
       gasLimit: 500000, // Increased gas limit
     })
@@ -205,7 +205,7 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
 
     return {
       success: true,
-      txHash: receipt.transactionHash,
+      txHash: receipt.transactionHash || tx.hash,
     }
   } catch (error: any) {
     console.error("Error minting NFT:", error)
@@ -313,8 +313,16 @@ export async function fetchUserNFTs() {
     await window.ethereum.request({ method: "eth_requestAccounts" })
 
     // Get signer and address
-    const signer = provider.getSigner ? await provider.getSigner() : provider
-    const userAddress = await signer.getAddress()
+    let userAddress
+    try {
+      const signer = provider.getSigner ? await provider.getSigner() : provider
+      userAddress = await signer.getAddress()
+    } catch (e) {
+      console.log("Error getting signer address:", e)
+      const accounts = await window.ethereum.request({ method: "eth_accounts" })
+      userAddress = accounts[0]
+    }
+
     console.log("Fetching NFTs for address:", userAddress)
 
     // Create contract instance using our helper function
@@ -375,8 +383,15 @@ export async function isContractOwner(): Promise<boolean> {
     const provider = await getEthersProvider()
 
     // Get signer and address
-    const signer = provider.getSigner ? await provider.getSigner() : provider
-    const userAddress = await signer.getAddress()
+    let userAddress
+    try {
+      const signer = provider.getSigner ? await provider.getSigner() : provider
+      userAddress = await signer.getAddress()
+    } catch (e) {
+      console.log("Error getting signer address:", e)
+      const accounts = await window.ethereum.request({ method: "eth_accounts" })
+      userAddress = accounts[0]
+    }
 
     // Create contract instance using our helper function
     const contract = await getContract(provider, CONTRACT_ADDRESS, contractABI)

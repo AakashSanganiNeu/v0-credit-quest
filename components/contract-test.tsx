@@ -9,6 +9,15 @@ import { AlertTriangle, Info } from "lucide-react"
 // Hardcoded contract address
 const CONTRACT_ADDRESS = "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
 
+// Simple ABI for testing
+const TEST_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function tokenCount() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function mintBadge(address, string) returns (uint256)",
+]
+
 export function ContractTest() {
   const [testing, setTesting] = useState(false)
   const [result, setResult] = useState<string | null>(null)
@@ -27,54 +36,31 @@ export function ContractTest() {
       }
 
       // Import ethers dynamically to avoid SSR issues
-      const ethersModule = await import("ethers")
+      const ethers = await import("ethers")
 
-      // Log available properties for debugging
-      const ethersInfo = {
-        version: ethersModule.version || "unknown",
-        hasProviders: !!ethersModule.providers,
-        hasEthers: !!ethersModule.ethers,
-        hasBrowserProvider: !!ethersModule.BrowserProvider,
-        hasContract: !!ethersModule.Contract,
-      }
+      // Log ethers version
+      setDebugInfo(`Ethers version: ${ethers.version || "unknown"}`)
+      console.log("Ethers version:", ethers.version)
 
-      if (ethersModule.ethers) {
-        ethersInfo.ethersHasProviders = !!ethersModule.ethers.providers
-        ethersInfo.ethersHasContract = !!ethersModule.ethers.Contract
-      }
-
-      setDebugInfo(`Ethers info: ${JSON.stringify(ethersInfo, null, 2)}`)
-      console.log("Ethers info:", ethersInfo)
-
-      // Helper function to safely get ethers provider
-      async function getProvider() {
-        try {
-          if (ethersModule.providers && ethersModule.providers.Web3Provider) {
-            return new ethersModule.providers.Web3Provider(window.ethereum)
-          } else if (
-            ethersModule.ethers &&
-            ethersModule.ethers.providers &&
-            ethersModule.ethers.providers.Web3Provider
-          ) {
-            return new ethersModule.ethers.providers.Web3Provider(window.ethereum)
-          } else if (ethersModule.BrowserProvider) {
-            return new ethersModule.BrowserProvider(window.ethereum)
-          } else {
-            console.error("Ethers structure:", JSON.stringify(Object.keys(ethersModule)))
-            if (ethersModule.ethers) {
-              console.error("Ethers.ethers structure:", JSON.stringify(Object.keys(ethersModule.ethers)))
-            }
-            throw new Error("Could not find a compatible Web3Provider in ethers.js")
-          }
-        } catch (error) {
-          console.error("Error initializing ethers provider:", error)
-          throw error
+      // Create provider
+      let provider
+      try {
+        if (ethers.providers && ethers.providers.Web3Provider) {
+          provider = new ethers.providers.Web3Provider(window.ethereum)
+          console.log("Using ethers.providers.Web3Provider")
+        } else if (ethers.ethers && ethers.ethers.providers && ethers.ethers.providers.Web3Provider) {
+          provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
+          console.log("Using ethers.ethers.providers.Web3Provider")
+        } else if (ethers.BrowserProvider) {
+          provider = new ethers.BrowserProvider(window.ethereum)
+          console.log("Using ethers.BrowserProvider")
+        } else {
+          throw new Error("Could not find a compatible Web3Provider in ethers.js")
         }
+      } catch (e) {
+        console.error("Error creating provider:", e)
+        throw new Error(`Failed to create provider: ${e.message}`)
       }
-
-      // Get provider
-      const provider = await getProvider()
-      console.log("Provider initialized successfully")
 
       // Get the network
       const network = await provider.getNetwork()
@@ -90,76 +76,78 @@ export function ContractTest() {
       }
       console.log("Contract exists at address:", CONTRACT_ADDRESS)
 
-      // Create a simple contract interface with just the functions we want to test
-      let contractInterface
-      try {
-        if (ethersModule.utils && ethersModule.utils.Interface) {
-          contractInterface = new ethersModule.utils.Interface([
-            "function name() view returns (string)",
-            "function tokenCount() view returns (uint256)",
-          ])
-          console.log("Using ethers.utils.Interface")
-        } else if (ethersModule.ethers && ethersModule.ethers.utils && ethersModule.ethers.utils.Interface) {
-          contractInterface = new ethersModule.ethers.utils.Interface([
-            "function name() view returns (string)",
-            "function tokenCount() view returns (uint256)",
-          ])
-          console.log("Using ethers.ethers.utils.Interface")
-        } else if (ethersModule.Interface) {
-          contractInterface = new ethersModule.Interface([
-            "function name() view returns (string)",
-            "function tokenCount() view returns (uint256)",
-          ])
-          console.log("Using ethers.Interface")
-        } else {
-          throw new Error("Could not find Interface constructor in ethers.js")
-        }
-      } catch (error) {
-        console.error("Error creating interface:", error)
-        throw new Error(`Failed to create contract interface: ${error.message}`)
-      }
-
       // Create contract instance
       let contract
       try {
-        if (ethersModule.Contract) {
-          contract = new ethersModule.Contract(CONTRACT_ADDRESS, contractInterface, provider)
+        // Get signer
+        let signer
+        try {
+          if (provider.getSigner) {
+            signer = await provider.getSigner()
+            console.log("Got signer from provider")
+          } else {
+            signer = provider
+            console.log("Using provider as signer")
+          }
+        } catch (e) {
+          console.log("Error getting signer:", e)
+          signer = provider
+        }
+
+        // Create contract
+        if (ethers.Contract) {
+          contract = new ethers.Contract(CONTRACT_ADDRESS, TEST_ABI, signer)
           console.log("Using ethers.Contract")
-        } else if (ethersModule.ethers && ethersModule.ethers.Contract) {
-          contract = new ethersModule.ethers.Contract(CONTRACT_ADDRESS, contractInterface, provider)
+        } else if (ethers.ethers && ethers.ethers.Contract) {
+          contract = new ethers.ethers.Contract(CONTRACT_ADDRESS, TEST_ABI, signer)
           console.log("Using ethers.ethers.Contract")
         } else {
           throw new Error("Could not find Contract constructor in ethers.js")
         }
-      } catch (error) {
-        console.error("Error creating contract:", error)
-        throw new Error(`Failed to create contract instance: ${error.message}`)
+      } catch (e) {
+        console.error("Error creating contract:", e)
+        throw new Error(`Failed to create contract: ${e.message}`)
       }
 
       // Log available contract methods for debugging
-      console.log("Contract methods:", Object.keys(contract.functions || {}))
+      console.log("Contract functions:", Object.keys(contract.functions || {}))
 
       // Test calling name()
-      let name
+      let name = "Unknown"
       try {
         name = await contract.name()
         console.log("Contract name:", name)
-      } catch (error) {
-        console.error("Error calling name():", error)
-        name = "Error: " + error.message
+      } catch (e) {
+        console.error("Error calling name():", e)
+        name = "Error: " + e.message
+      }
+
+      // Test calling symbol()
+      let symbol = "Unknown"
+      try {
+        symbol = await contract.symbol()
+        console.log("Contract symbol:", symbol)
+      } catch (e) {
+        console.error("Error calling symbol():", e)
+        symbol = "Error: " + e.message
       }
 
       // Test calling tokenCount()
-      let tokenCount
+      let tokenCount = "Unknown"
       try {
-        tokenCount = await contract.tokenCount()
-        console.log("Token count:", tokenCount.toString())
-      } catch (error) {
-        console.error("Error calling tokenCount():", error)
-        tokenCount = "Error: " + error.message
+        const count = await contract.tokenCount()
+        tokenCount = count.toString()
+        console.log("Token count:", tokenCount)
+      } catch (e) {
+        console.error("Error calling tokenCount():", e)
+        tokenCount = "Error: " + e.message
       }
 
-      setResult(`Contract name: ${name}, Token count: ${tokenCount.toString()}`)
+      // Check if mintBadge exists
+      const hasMintBadge = Object.keys(contract.functions || {}).includes("mintBadge")
+      console.log("Has mintBadge function:", hasMintBadge)
+
+      setResult(`Contract name: ${name}, Symbol: ${symbol}, Token count: ${tokenCount}, Has mintBadge: ${hasMintBadge}`)
     } catch (err: any) {
       console.error("Error testing contract:", err)
       setError(err.message || "Failed to test contract")
