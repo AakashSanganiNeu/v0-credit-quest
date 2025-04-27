@@ -3,9 +3,52 @@
 PolkaScore is a web application that calculates a credit score for Polkadot wallet addresses based on on-chain activity such as staking, transfers, governance participation, and NFT badges.
 
 ![PolkaScore Screenshot](https://github.com/yourusername/polkascore/raw/main/public/screenshot.png)
+# DeFiQuestNFT
 
-## Features
+A custom NFT smart contract for awarding DeFi achievement badges, built in Solidity and deployed on **Moonbase Alpha** (Polkadot parachain).
 
+## 🚀 How It Works
+
+- **Purpose:** Mint unique NFTs ("badges") for users completing DeFi quests.
+- **Inherits:** 
+  - `ERC721URIStorage` - NFT storage with metadata URIs.
+  - `Ownable` - Admin control over the contract.
+- **Key Function:** `mintBadge(address to, string badgeUri)`
+  - Safely mints an NFT to `to` address.
+  - Sets metadata URI for the badge.
+  - Increments total token count.
+
+## 🌐 Deployment Info
+
+- **Network:** Moonbase Alpha
+- **Contract Address:** [0xbfba3bca253b48b3f3f79fc1446ff3049082869b](https://moonbase.moonscan.io/address/0xbfba3bca253b48b3f3f79fc1446ff3049082869b)
+
+## 📂 Repository Structure
+
+- `contracts/DeFiQuestNFT.sol` — Smart contract
+- `README.md` — Project details
+- `demo/` — (optional) Deployment/minting video or screenshots
+
+## 🎥 Demo Video
+
+*(Insert your demo video link here)*
+
+Shows:
+- Deploying the contract
+- Minting badges
+- Viewing NFTs on Polkadot wallet
+
+## 📚 Tech Used
+
+- Solidity + OpenZeppelin
+- Moonbeam / Moonbase Alpha
+- ethers.js / web3.js (for frontend interaction)
+
+## ✨ Features
+
+- Safe NFT minting (`_safeMint`)
+- Dynamic metadata via URI
+- Cross-chain potential via Polkadot ecosystem
 - 📊 Dashboard with credit score visualization
 - 💳 Score breakdown with detailed component analysis
 - 📈 Interactive charts for activity history
@@ -17,9 +60,6 @@ PolkaScore is a web application that calculates a credit score for Polkadot wall
 ## Demo Accounts
 
 Use these demo addresses to see different score tiers:
-
-- **Diamond Tier**: `15oF4uVJwmo4TdGW7VfQxNLavjCXviqxT9S1MgbjMNHr6Sp5`
-- **Platinum Tier**: `14Ztd3KJDaB9xyJtRkREtSZDdhLSbm7UUKr8YGXLUfQB3Ko3`
 - **Gold Tier**: `12Y8b4C9ar863uZFNuuQwP4BsCZEKKcHQxbP9MdcNXwBKUa9`
 - **Silver Tier**: `16LavPxjMCbJmwKgLxzwQG6SiT7voMFT8EErNnmSvXDFGnJP`
 - **Bronze Tier**: `1F9VkLCkGWwtk7nPWjDhQDEUxBTw7HHy8xkfdqtAqbUXbCc`
