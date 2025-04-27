@@ -57,6 +57,8 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [], isLoa
     setTxHash(null)
 
     try {
+      console.log(`Starting mint process for badge type: ${selectedBadge}`)
+
       // Call the NFT service to mint the badge
       const result = await mintNFTBadge(selectedBadge)
 
@@ -67,6 +69,7 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [], isLoa
         setError(result.error || "Failed to mint NFT")
       }
     } catch (err: any) {
+      console.error("Error in handleMint:", err)
       setError(err.message || "An unexpected error occurred")
     } finally {
       setMinting(false)
@@ -210,7 +213,7 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [], isLoa
                       <Check className="size-3 text-white" />
                     </span>
                   )}
-                  {!isAvailable && !isMinted && (
+                  {!isAvailable && (
                     <span className="absolute -top-1 -right-1 size-4 bg-gray-500 rounded-full flex items-center justify-center">
                       <Lock className="size-3 text-white" />
                     </span>
@@ -267,7 +270,7 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [], isLoa
                       </ul>
                     </div>
 
-                    {!isAvailable && !isMinted && (
+                    {!isAvailable && (
                       <div className="p-4 bg-muted/80 rounded-lg border border-dashed">
                         <h4 className="font-medium flex items-center gap-2">
                           <Lock className="size-4" />

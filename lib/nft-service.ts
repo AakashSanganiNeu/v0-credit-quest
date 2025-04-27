@@ -22,6 +22,16 @@ async function getEthersProvider() {
   try {
     // Import ethers dynamically to avoid SSR issues
     const ethersModule = await import("ethers")
+    console.log("Ethers module imported successfully")
+
+    // Log available properties for debugging
+    console.log("Ethers module keys:", Object.keys(ethersModule))
+    if (ethersModule.ethers) {
+      console.log("Ethers.ethers keys:", Object.keys(ethersModule.ethers))
+      if (ethersModule.ethers.providers) {
+        console.log("Ethers.ethers.providers keys:", Object.keys(ethersModule.ethers.providers))
+      }
+    }
 
     // Handle different ethers versions and import structures
     let provider
@@ -61,18 +71,44 @@ async function getEthersProvider() {
 async function getContract(provider, contractAddress, abi) {
   try {
     const ethersModule = await import("ethers")
+    console.log("Creating contract instance")
 
     // Get signer if needed
-    const signer = provider.getSigner ? await provider.getSigner() : provider
+    let signer
+    try {
+      if (provider.getSigner) {
+        signer = await provider.getSigner()
+        console.log("Got signer from provider")
+      } else {
+        signer = provider
+        console.log("Using provider as signer")
+      }
+    } catch (error) {
+      console.error("Error getting signer:", error)
+      // Fall back to using provider
+      signer = provider
+      console.log("Falling back to using provider as signer")
+    }
 
     // Create contract instance based on available methods
+    let contract
     if (ethersModule.Contract) {
-      return new ethersModule.Contract(contractAddress, abi, signer)
+      contract = new ethersModule.Contract(contractAddress, abi, signer)
+      console.log("Created contract using ethers.Contract")
     } else if (ethersModule.ethers && ethersModule.ethers.Contract) {
-      return new ethersModule.ethers.Contract(contractAddress, abi, signer)
+      contract = new ethersModule.ethers.Contract(contractAddress, abi, signer)
+      console.log("Created contract using ethers.ethers.Contract")
     } else {
       throw new Error("Could not find Contract constructor in ethers.js")
     }
+
+    // Verify the contract has the mintBadge function
+    if (typeof contract.mintBadge !== "function") {
+      console.error("Contract methods:", Object.keys(contract.functions || {}))
+      throw new Error("Contract does not have mintBadge function")
+    }
+
+    return contract
   } catch (error) {
     console.error("Error creating contract instance:", error)
     throw error
@@ -85,6 +121,8 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
       throw new Error("MetaMask is not installed")
     }
 
+    console.log("Starting mintNFTBadge for badge type:", badgeType)
+
     // Request account access
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
     if (accounts.length === 0) {
@@ -92,9 +130,11 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
     }
 
     const userAddress = accounts[0]
+    console.log("User address:", userAddress)
 
     // Get provider using our helper function
     const provider = await getEthersProvider()
+    console.log("Provider initialized successfully")
 
     // Get the network to verify we're on the right chain
     const network = await provider.getNetwork()
@@ -110,13 +150,19 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
     console.log("Contract exists at address:", CONTRACT_ADDRESS)
 
     // Create contract instance using our helper function
+    console.log("Creating contract instance with ABI:", contractABI.length, "items")
     const nftContract = await getContract(provider, CONTRACT_ADDRESS, contractABI)
+    console.log("Contract instance created successfully")
+
+    // Log available contract methods for debugging
+    console.log("Contract methods:", Object.keys(nftContract.functions || {}))
 
     // Get the badge URI based on the badge type
     const badgeUri = BADGE_URIS[badgeType as keyof typeof BADGE_URIS]
     if (!badgeUri) {
       throw new Error("Invalid badge type")
     }
+    console.log("Badge URI:", badgeUri)
 
     // Try to get the token count to verify contract interaction works
     try {
@@ -128,6 +174,12 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
 
     // Call the mintBadge function with more detailed error handling
     console.log(`Minting ${badgeType} badge for ${userAddress} with URI ${badgeUri}`)
+
+    // Verify mintBadge function exists
+    if (typeof nftContract.mintBadge !== "function") {
+      console.error("Available contract functions:", Object.keys(nftContract.functions || {}))
+      throw new Error("mintBadge function not found on contract")
+    }
 
     // Estimate gas first to check if the transaction will fail
     try {
