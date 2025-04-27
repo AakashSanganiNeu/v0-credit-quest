@@ -2,7 +2,9 @@
 
 PolkaScore is a web application that calculates a credit score for Polkadot wallet addresses based on on-chain activity such as staking, transfers, governance participation, and NFT badges.
 
-![PolkaScore Screenshot](https://github.com/yourusername/polkascore/raw/main/public/screenshot.png)
+## 🎥 Demo Photos
+
+*([demo video link](https://drive.google.com/drive/folders/176GyVj6nMa8KGCDddzzixIpVy-V1uAdQ?usp=sharing))*
 
 ## 🎥 Demo Video
 
