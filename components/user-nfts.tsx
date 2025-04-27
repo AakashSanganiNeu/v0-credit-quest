@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ExternalLink, AlertTriangle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-// Verify the contract address is hardcoded
+// Hardcoded contract address
 const CONTRACT_ADDRESS = "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
 
 interface NFT {

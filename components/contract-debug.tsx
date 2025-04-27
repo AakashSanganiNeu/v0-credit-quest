@@ -57,20 +57,48 @@ export function ContractDebug() {
         console.error("Error getting NFT count:", countError)
       }
 
-      // Get contract info
+      // Get contract info using our helper functions from nft-service.ts
       try {
-        const ethers = await import("ethers")
-        const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
-        const contract = new ethers.ethers.Contract(
-          contractAddress,
-          [
-            "function name() view returns (string)",
-            "function symbol() view returns (string)",
-            "function balanceOf(address) view returns (uint256)",
-            "function tokenCount() view returns (uint256)",
-          ],
-          provider,
-        )
+        // Import ethers dynamically to avoid SSR issues
+        const ethersModule = await import("ethers")
+
+        // Helper function to safely get ethers provider (simplified version)
+        async function getProvider() {
+          if (ethersModule.providers && ethersModule.providers.Web3Provider) {
+            return new ethersModule.providers.Web3Provider(window.ethereum)
+          } else if (
+            ethersModule.ethers &&
+            ethersModule.ethers.providers &&
+            ethersModule.ethers.providers.Web3Provider
+          ) {
+            return new ethersModule.ethers.providers.Web3Provider(window.ethereum)
+          } else if (ethersModule.BrowserProvider) {
+            return new ethersModule.BrowserProvider(window.ethereum)
+          } else {
+            throw new Error("Could not find a compatible Web3Provider in ethers.js")
+          }
+        }
+
+        // Helper function to create contract instance (simplified version)
+        async function createContract(provider: any, abi: any) {
+          const signer = provider.getSigner ? await provider.getSigner() : provider
+
+          if (ethersModule.Contract) {
+            return new ethersModule.Contract(contractAddress, abi, signer)
+          } else if (ethersModule.ethers && ethersModule.ethers.Contract) {
+            return new ethersModule.ethers.Contract(contractAddress, abi, signer)
+          } else {
+            throw new Error("Could not find Contract constructor in ethers.js")
+          }
+        }
+
+        const provider = await getProvider()
+        const contract = await createContract(provider, [
+          "function name() view returns (string)",
+          "function symbol() view returns (string)",
+          "function balanceOf(address) view returns (uint256)",
+          "function tokenCount() view returns (uint256)",
+        ])
 
         const info = {
           name: "Unknown",
@@ -106,8 +134,9 @@ export function ContractDebug() {
         }
 
         setContractInfo(info)
-      } catch (infoError) {
+      } catch (infoError: any) {
         console.error("Error getting contract info:", infoError)
+        setError(`Error getting contract info: ${infoError.message || "Unknown error"}`)
       }
     } catch (err: any) {
       console.error("Error checking contract ownership:", err)

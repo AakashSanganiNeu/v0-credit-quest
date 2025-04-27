@@ -13,14 +13,77 @@ const BADGE_URIS = {
 // Check if we're in a browser environment
 const isBrowser = typeof window !== "undefined"
 
+// Helper function to safely get ethers provider
+async function getEthersProvider() {
+  if (!isBrowser || !window.ethereum) {
+    throw new Error("MetaMask is not installed or not accessible")
+  }
+
+  try {
+    // Import ethers dynamically to avoid SSR issues
+    const ethersModule = await import("ethers")
+
+    // Handle different ethers versions and import structures
+    let provider
+
+    // Try ethers v5 structure
+    if (ethersModule.providers && ethersModule.providers.Web3Provider) {
+      provider = new ethersModule.providers.Web3Provider(window.ethereum)
+      console.log("Using ethers.providers.Web3Provider")
+    }
+    // Try ethers v5 nested structure
+    else if (ethersModule.ethers && ethersModule.ethers.providers && ethersModule.ethers.providers.Web3Provider) {
+      provider = new ethersModule.ethers.providers.Web3Provider(window.ethereum)
+      console.log("Using ethers.ethers.providers.Web3Provider")
+    }
+    // Try ethers v6 structure
+    else if (ethersModule.BrowserProvider) {
+      provider = new ethersModule.BrowserProvider(window.ethereum)
+      console.log("Using ethers.BrowserProvider (v6)")
+    }
+    // If none of the above work, throw an error
+    else {
+      console.error("Ethers structure:", JSON.stringify(Object.keys(ethersModule)))
+      if (ethersModule.ethers) {
+        console.error("Ethers.ethers structure:", JSON.stringify(Object.keys(ethersModule.ethers)))
+      }
+      throw new Error("Could not find a compatible Web3Provider in ethers.js")
+    }
+
+    return provider
+  } catch (error) {
+    console.error("Error initializing ethers provider:", error)
+    throw error
+  }
+}
+
+// Helper function to create contract instance
+async function getContract(provider, contractAddress, abi) {
+  try {
+    const ethersModule = await import("ethers")
+
+    // Get signer if needed
+    const signer = provider.getSigner ? await provider.getSigner() : provider
+
+    // Create contract instance based on available methods
+    if (ethersModule.Contract) {
+      return new ethersModule.Contract(contractAddress, abi, signer)
+    } else if (ethersModule.ethers && ethersModule.ethers.Contract) {
+      return new ethersModule.ethers.Contract(contractAddress, abi, signer)
+    } else {
+      throw new Error("Could not find Contract constructor in ethers.js")
+    }
+  } catch (error) {
+    console.error("Error creating contract instance:", error)
+    throw error
+  }
+}
+
 export async function mintNFTBadge(badgeType: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     if (!isBrowser || !window.ethereum) {
       throw new Error("MetaMask is not installed")
     }
-
-    // Import ethers dynamically to avoid SSR issues
-    const ethers = await import("ethers")
 
     // Request account access
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" })
@@ -30,15 +93,12 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
 
     const userAddress = accounts[0]
 
-    // Create a provider - using ethers v5 syntax with proper dynamic import
-    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
+    // Get provider using our helper function
+    const provider = await getEthersProvider()
 
     // Get the network to verify we're on the right chain
     const network = await provider.getNetwork()
     console.log("Connected to network:", network)
-
-    // Get the signer
-    const signer = provider.getSigner()
 
     // Verify the contract exists on this network
     const code = await provider.getCode(CONTRACT_ADDRESS)
@@ -49,8 +109,8 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
     }
     console.log("Contract exists at address:", CONTRACT_ADDRESS)
 
-    // Create contract instance
-    const nftContract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractABI, signer)
+    // Create contract instance using our helper function
+    const nftContract = await getContract(provider, CONTRACT_ADDRESS, contractABI)
 
     // Get the badge URI based on the badge type
     const badgeUri = BADGE_URIS[badgeType as keyof typeof BADGE_URIS]
@@ -122,14 +182,11 @@ export async function getNFTCount(): Promise<number> {
       return 0
     }
 
-    // Import ethers dynamically to avoid SSR issues
-    const ethers = await import("ethers")
+    // Get provider using our helper function
+    const provider = await getEthersProvider()
 
-    // Create a provider - using ethers v5 syntax with proper dynamic import
-    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
-
-    // Create contract instance (read-only)
-    const nftContract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
+    // Create contract instance using our helper function
+    const nftContract = await getContract(provider, CONTRACT_ADDRESS, contractABI)
 
     // Try to get the token count - the updated contract has tokenCount
     try {
@@ -197,21 +254,19 @@ export async function fetchUserNFTs() {
   }
 
   try {
-    // Import ethers dynamically to avoid SSR issues
-    const ethers = await import("ethers")
-
-    // Connect to MetaMask
-    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
+    // Get provider using our helper function
+    const provider = await getEthersProvider()
 
     // Request account access if needed
     await window.ethereum.request({ method: "eth_requestAccounts" })
 
-    const signer = provider.getSigner()
+    // Get signer and address
+    const signer = provider.getSigner ? await provider.getSigner() : provider
     const userAddress = await signer.getAddress()
     console.log("Fetching NFTs for address:", userAddress)
 
-    // Create contract instance
-    const contract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
+    // Create contract instance using our helper function
+    const contract = await getContract(provider, CONTRACT_ADDRESS, contractABI)
 
     const userNFTs = []
     const maxTokensToCheck = 100 // Adjust based on your expected total NFTs minted
@@ -264,16 +319,15 @@ export async function isContractOwner(): Promise<boolean> {
   }
 
   try {
-    // Import ethers dynamically to avoid SSR issues
-    const ethers = await import("ethers")
+    // Get provider using our helper function
+    const provider = await getEthersProvider()
 
-    // Connect to MetaMask
-    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
-    const signer = provider.getSigner()
+    // Get signer and address
+    const signer = provider.getSigner ? await provider.getSigner() : provider
     const userAddress = await signer.getAddress()
 
-    // Create contract instance
-    const contract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
+    // Create contract instance using our helper function
+    const contract = await getContract(provider, CONTRACT_ADDRESS, contractABI)
 
     try {
       // Get the contract owner
@@ -305,11 +359,10 @@ export async function getContractDetails() {
   }
 
   try {
-    // Import ethers dynamically to avoid SSR issues
-    const ethers = await import("ethers")
+    // Get provider using our helper function
+    const provider = await getEthersProvider()
 
-    // Connect to MetaMask
-    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
+    // Get network information
     const network = await provider.getNetwork()
 
     // Get the code at the contract address
@@ -319,7 +372,7 @@ export async function getContractDetails() {
     return {
       address: CONTRACT_ADDRESS,
       network: {
-        name: network.name,
+        name: network.name || network.chainName || `Chain ID: ${network.chainId}`,
         chainId: network.chainId,
       },
       hasCode,

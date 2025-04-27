@@ -25,30 +25,79 @@ export function ContractTest() {
       }
 
       // Import ethers dynamically to avoid SSR issues
-      const ethers = await import("ethers")
+      const ethersModule = await import("ethers")
 
-      // Create a provider
-      const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
+      // Helper function to safely get ethers provider
+      async function getProvider() {
+        try {
+          if (ethersModule.providers && ethersModule.providers.Web3Provider) {
+            return new ethersModule.providers.Web3Provider(window.ethereum)
+          } else if (
+            ethersModule.ethers &&
+            ethersModule.ethers.providers &&
+            ethersModule.ethers.providers.Web3Provider
+          ) {
+            return new ethersModule.ethers.providers.Web3Provider(window.ethereum)
+          } else if (ethersModule.BrowserProvider) {
+            return new ethersModule.BrowserProvider(window.ethereum)
+          } else {
+            console.error("Ethers structure:", JSON.stringify(Object.keys(ethersModule)))
+            if (ethersModule.ethers) {
+              console.error("Ethers.ethers structure:", JSON.stringify(Object.keys(ethersModule.ethers)))
+            }
+            throw new Error("Could not find a compatible Web3Provider in ethers.js")
+          }
+        } catch (error) {
+          console.error("Error initializing ethers provider:", error)
+          throw error
+        }
+      }
+
+      // Get provider
+      const provider = await getProvider()
 
       // Get the network
       const network = await provider.getNetwork()
+      const networkName = network.name || network.chainName || `Chain ID: ${network.chainId}`
 
       // Check if the contract exists
       const code = await provider.getCode(CONTRACT_ADDRESS)
       if (code === "0x") {
         throw new Error(
-          `No contract found at address ${CONTRACT_ADDRESS} on network ${network.name} (${network.chainId})`,
+          `No contract found at address ${CONTRACT_ADDRESS} on network ${networkName} (${network.chainId})`,
         )
       }
 
       // Create a simple contract interface with just the functions we want to test
-      const contractInterface = new ethers.ethers.utils.Interface([
-        "function name() view returns (string)",
-        "function tokenCount() view returns (uint256)",
-      ])
+      let contractInterface
+      if (ethersModule.utils && ethersModule.utils.Interface) {
+        contractInterface = new ethersModule.utils.Interface([
+          "function name() view returns (string)",
+          "function tokenCount() view returns (uint256)",
+        ])
+      } else if (ethersModule.ethers && ethersModule.ethers.utils && ethersModule.ethers.utils.Interface) {
+        contractInterface = new ethersModule.ethers.utils.Interface([
+          "function name() view returns (string)",
+          "function tokenCount() view returns (uint256)",
+        ])
+      } else if (ethersModule.Interface) {
+        contractInterface = new ethersModule.Interface([
+          "function name() view returns (string)",
+          "function tokenCount() view returns (uint256)",
+        ])
+      } else {
+        throw new Error("Could not find Interface constructor in ethers.js")
+      }
 
       // Create contract instance
-      const contract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractInterface, provider)
+      let contract
+      if (ethersModule.Contract) {
+        contract = new ethersModule.Contract(CONTRACT_ADDRESS, contractInterface, provider)
+      } else if (ethersModule.ethers && ethersModule.ethers.Contract) {
+        contract = new ethersModule.ethers.Contract(CONTRACT_ADDRESS, contractInterface, provider)
+      } else {
+        throw new Error("Could not find Contract constructor in ethers.js")
+      }
 
       // Test calling name()
       const name = await contract.name()
