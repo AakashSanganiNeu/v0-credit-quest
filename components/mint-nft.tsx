@@ -4,9 +4,11 @@ import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { CircleDashed, Download, Check, Lock } from "lucide-react"
+import { CircleDashed, Download, Check, Lock, ExternalLink } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { BADGE_TIERS } from "@/lib/constants"
+import { mintNFTBadge } from "@/lib/nft-service"
 
 interface MintNFTProps {
   score: number
@@ -18,6 +20,8 @@ interface MintNFTProps {
 export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: MintNFTProps) {
   const [minting, setMinting] = useState(false)
   const [selectedBadge, setSelectedBadge] = useState<string | null>(null)
+  const [txHash, setTxHash] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const nftRef = useRef<HTMLDivElement>(null)
 
   const badges = [BADGE_TIERS.BRONZE, BADGE_TIERS.SILVER, BADGE_TIERS.GOLD]
@@ -43,16 +47,28 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
     }
   }, [score, mintedBadges])
 
-  const handleMint = () => {
+  const handleMint = async () => {
     if (!selectedBadge) return
 
     setMinting(true)
+    setError(null)
+    setTxHash(null)
 
-    // Simulate minting process
-    setTimeout(() => {
+    try {
+      // Call the NFT service to mint the badge
+      const result = await mintNFTBadge(selectedBadge)
+
+      if (result.success && result.txHash) {
+        setTxHash(result.txHash)
+        onMint(selectedBadge)
+      } else {
+        setError(result.error || "Failed to mint NFT")
+      }
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred")
+    } finally {
       setMinting(false)
-      onMint(selectedBadge)
-    }, 2000)
+    }
   }
 
   // Function to download NFT as image
@@ -115,7 +131,7 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
     <Card>
       <CardHeader>
         <CardTitle>Mint Your Score as NFT</CardTitle>
-        <CardDescription>Create a permanent record of your PolkaScore on Asset Hub</CardDescription>
+        <CardDescription>Create a permanent record of your PolkaScore on Moonbase</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="mb-4 p-4 bg-muted rounded-lg">
@@ -134,6 +150,28 @@ export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: Min
             </div>
           </div>
         </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {txHash && (
+          <Alert className="mb-4 bg-green-500/10 text-green-500 border-green-500/20">
+            <AlertDescription className="flex items-center justify-between">
+              <span>NFT minted successfully!</span>
+              <a
+                href={`https://moonbase.moonscan.io/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center text-sm underline"
+              >
+                View on Explorer <ExternalLink className="ml-1 h-3 w-3" />
+              </a>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Tabs value={selectedBadge || "bronze"} onValueChange={setSelectedBadge} className="mb-6">
           <TabsList className="grid grid-cols-3">

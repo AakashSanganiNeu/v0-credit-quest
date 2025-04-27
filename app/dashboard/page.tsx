@@ -7,10 +7,14 @@ import { ScoreOverview } from "@/components/score-overview"
 import { ScoreBreakdown } from "@/components/score-breakdown"
 import { ScoreRecommendations } from "@/components/score-recommendations"
 import { MintNFT } from "@/components/mint-nft"
-import { BadgeDisplay } from "@/components/badge-display"
+import { UserNFTs } from "@/components/user-nfts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { fetchUserData } from "@/lib/score-calculator"
+import { getNFTCount } from "@/lib/nft-service"
 import type { UserData } from "@/types/user-data"
+import { ContractDebug } from "@/components/contract-debug"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertTriangle } from "lucide-react"
 
 export default function Dashboard() {
   const searchParams = useSearchParams()
@@ -19,12 +23,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [mintedBadges, setMintedBadges] = useState<string[]>([])
   const [score, setScore] = useState<number>(0)
+  const [nftCount, setNftCount] = useState<number>(0)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
       if (!walletAddress) return
 
       setLoading(true)
+      setError(null)
+
       try {
         // In a real app, this would fetch actual blockchain data
         const data = await fetchUserData(walletAddress)
@@ -33,8 +41,18 @@ export default function Dashboard() {
         // Generate a random score between 300 and 850
         const randomScore = Math.floor(Math.random() * (850 - 300 + 1)) + 300
         setScore(randomScore)
-      } catch (error) {
+
+        // Get the NFT count
+        try {
+          const count = await getNFTCount()
+          setNftCount(count)
+        } catch (nftError) {
+          console.error("Error getting NFT count:", nftError)
+          // Don't set an error, just log it and continue
+        }
+      } catch (error: any) {
         console.error("Error fetching user data:", error)
+        setError(error.message || "Failed to load dashboard data")
       } finally {
         setLoading(false)
       }
@@ -45,6 +63,7 @@ export default function Dashboard() {
 
   const handleMintBadge = (badgeType: string) => {
     setMintedBadges((prev) => [...prev, badgeType])
+    setNftCount((prev) => prev + 1)
   }
 
   if (!walletAddress) {
@@ -65,10 +84,20 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Your PolkaScore Dashboard</h1>
-          <p className="text-muted-foreground">
-            Wallet: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-          </p>
+          <div className="flex justify-between items-center">
+            <p className="text-muted-foreground">
+              Wallet: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+            </p>
+            <p className="text-sm">Total NFTs Minted: {nftCount}</p>
+          </div>
         </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         {loading ? (
           <div className="space-y-8">
@@ -78,11 +107,26 @@ export default function Dashboard() {
           </div>
         ) : userData ? (
           <div className="space-y-8">
-            <BadgeDisplay score={score} mintedBadges={mintedBadges} />
-            <ScoreOverview score={score} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1">
+                <ScoreOverview score={score} />
+              </div>
+              <div className="lg:col-span-2">
+                <MintNFT
+                  score={score}
+                  walletAddress={walletAddress}
+                  onMint={handleMintBadge}
+                  mintedBadges={mintedBadges}
+                />
+              </div>
+            </div>
+
+            <UserNFTs />
+
+            <ContractDebug />
+
             <ScoreBreakdown userData={userData} />
             <ScoreRecommendations userData={userData} />
-            <MintNFT score={score} walletAddress={walletAddress} onMint={handleMintBadge} mintedBadges={mintedBadges} />
           </div>
         ) : (
           <div className="text-center py-16">
