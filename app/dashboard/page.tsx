@@ -7,6 +7,7 @@ import { ScoreOverview } from "@/components/score-overview"
 import { ScoreBreakdown } from "@/components/score-breakdown"
 import { ScoreRecommendations } from "@/components/score-recommendations"
 import { MintNFT } from "@/components/mint-nft"
+import { BadgeDisplay } from "@/components/badge-display"
 import { Skeleton } from "@/components/ui/skeleton"
 import { calculateScore, fetchUserData } from "@/lib/score-calculator"
 import type { UserData } from "@/types/user-data"
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const walletAddress = searchParams.get("address")
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mintedBadges, setMintedBadges] = useState<string[]>([])
 
   useEffect(() => {
     const loadData = async () => {
@@ -35,6 +37,10 @@ export default function Dashboard() {
 
     loadData()
   }, [walletAddress])
+
+  const handleMintBadge = (badgeType: string) => {
+    setMintedBadges((prev) => [...prev, badgeType])
+  }
 
   if (!walletAddress) {
     return (
@@ -67,10 +73,16 @@ export default function Dashboard() {
           </div>
         ) : userData ? (
           <div className="space-y-8">
+            <BadgeDisplay score={calculateScore(userData)} mintedBadges={mintedBadges} />
             <ScoreOverview score={calculateScore(userData)} />
             <ScoreBreakdown userData={userData} />
             <ScoreRecommendations userData={userData} />
-            <MintNFT score={calculateScore(userData)} walletAddress={walletAddress} />
+            <MintNFT
+              score={calculateScore(userData)}
+              walletAddress={walletAddress}
+              onMint={handleMintBadge}
+              mintedBadges={mintedBadges}
+            />
           </div>
         ) : (
           <div className="text-center py-16">

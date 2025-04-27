@@ -47,8 +47,6 @@ cd polkascore
 npm install
 # or
 yarn install
-
-npm install --legacy-peer-deps
 \`\`\`
 
 3. Start the development server:

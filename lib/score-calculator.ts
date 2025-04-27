@@ -58,16 +58,32 @@ export function calculateComponentScore(componentData: any, weight: number, maxS
   return 0
 }
 
-// Update the fetchUserData function to include more demo addresses for different score tiers
+// Helper function to get a random number between min and max
+function getRandomNumber(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+// Update the fetchUserData function to work with Ethereum addresses
 export async function fetchUserData(address: string): Promise<UserData> {
   // Simulate API call delay
   await new Promise((resolve) => setTimeout(resolve, 1500))
 
-  // Diamond tier (700+ score)
-  if (address === "15oF4uVJwmo4TdGW7VfQxNLavjCXviqxT9S1MgbjMNHr6Sp5") {
+  // Randomize staking amount between 300-450
+  const randomStakingAmount = getRandomNumber(300, 450)
+
+  // Generate a deterministic score based on the address
+  // This is just for demo purposes - in a real app, you'd fetch real data
+  const addressSum = address
+    .toLowerCase()
+    .split("")
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0)
+
+  // Use the address sum to determine the tier
+  // Gold tier addresses (700+ score)
+  if (address.toLowerCase() === "0x742d35cc6634c0532925a3b844bc454e4438f44e" || addressSum % 1000 > 700) {
     return {
       staking: {
-        amountStaked: 450,
+        amountStaked: randomStakingAmount,
         stakingDuration: 180,
         validatorsNominated: 8,
       },
@@ -89,63 +105,11 @@ export async function fetchUserData(address: string): Promise<UserData> {
     }
   }
 
-  // Platinum tier (600-699 score)
-  if (address === "14Ztd3KJDaB9xyJtRkREtSZDdhLSbm7UUKr8YGXLUfQB3Ko3") {
+  // Silver tier addresses (500-700 score)
+  if (address.toLowerCase() === "0x8b3392483ba26d65e331db86d4f430ae2f14c4b4" || addressSum % 1000 > 500) {
     return {
       staking: {
-        amountStaked: 350,
-        stakingDuration: 120,
-        validatorsNominated: 6,
-      },
-      transfers: {
-        frequency: 25,
-        volume: 500,
-        uniqueRecipients: 10,
-      },
-      governance: {
-        votesCast: 5,
-        proposalsCreated: 0,
-        delegationActivity: true,
-      },
-      nftBadges: {
-        badgesOwned: 2,
-        rareBadges: 1,
-        badgeAge: 60,
-      },
-    }
-  }
-
-  // Gold tier (500-599 score)
-  if (address === "12Y8b4C9ar863uZFNuuQwP4BsCZEKKcHQxbP9MdcNXwBKUa9") {
-    return {
-      staking: {
-        amountStaked: 250,
-        stakingDuration: 90,
-        validatorsNominated: 4,
-      },
-      transfers: {
-        frequency: 18,
-        volume: 350,
-        uniqueRecipients: 7,
-      },
-      governance: {
-        votesCast: 3,
-        proposalsCreated: 0,
-        delegationActivity: false,
-      },
-      nftBadges: {
-        badgesOwned: 1,
-        rareBadges: 0,
-        badgeAge: 30,
-      },
-    }
-  }
-
-  // Silver tier (400-499 score)
-  if (address === "16LavPxjMCbJmwKgLxzwQG6SiT7voMFT8EErNnmSvXDFGnJP") {
-    return {
-      staking: {
-        amountStaked: 120,
+        amountStaked: randomStakingAmount,
         stakingDuration: 45,
         validatorsNominated: 2,
       },
@@ -167,11 +131,11 @@ export async function fetchUserData(address: string): Promise<UserData> {
     }
   }
 
-  // Bronze tier (<400 score)
-  if (address === "1F9VkLCkGWwtk7nPWjDhQDEUxBTw7HHy8xkfdqtAqbUXbCc") {
+  // Bronze tier addresses (300-500 score)
+  if (address.toLowerCase() === "0x3f579f097f2ce8696ae8c417582cfafde9ec9966" || addressSum % 1000 > 300) {
     return {
       staking: {
-        amountStaked: 50,
+        amountStaked: randomStakingAmount,
         stakingDuration: 15,
         validatorsNominated: 1,
       },
@@ -193,27 +157,27 @@ export async function fetchUserData(address: string): Promise<UserData> {
     }
   }
 
-  // Return default mock data for any other address
+  // Default case - low score
   return {
     staking: {
-      amountStaked: 250,
-      stakingDuration: 120,
-      validatorsNominated: 5,
+      amountStaked: randomStakingAmount,
+      stakingDuration: 10,
+      validatorsNominated: 1,
     },
     transfers: {
-      frequency: 15,
-      volume: 350,
-      uniqueRecipients: 8,
+      frequency: 3,
+      volume: 50,
+      uniqueRecipients: 2,
     },
     governance: {
-      votesCast: 4,
+      votesCast: 0,
       proposalsCreated: 0,
       delegationActivity: false,
     },
     nftBadges: {
-      badgesOwned: 2,
-      rareBadges: 1,
-      badgeAge: 60,
+      badgesOwned: 0,
+      rareBadges: 0,
+      badgeAge: 0,
     },
   }
 }

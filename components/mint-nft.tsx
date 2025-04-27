@@ -5,16 +5,25 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CircleDashed, Download, Check } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { BADGE_TIERS } from "@/lib/constants"
 
 interface MintNFTProps {
   score: number
   walletAddress: string
+  onMint: (badgeType: string) => void
+  mintedBadges: string[]
 }
 
-export function MintNFT({ score, walletAddress }: MintNFTProps) {
+export function MintNFT({ score, walletAddress, onMint, mintedBadges = [] }: MintNFTProps) {
   const [minting, setMinting] = useState(false)
-  const [minted, setMinted] = useState(false)
+  const [selectedBadge, setSelectedBadge] = useState<string>("bronze")
   const nftRef = useRef<HTMLDivElement>(null)
+
+  const badges = [BADGE_TIERS.BRONZE, BADGE_TIERS.SILVER, BADGE_TIERS.GOLD]
+
+  // Determine which badges are available based on score
+  const availableBadges = badges.filter((badge) => score >= badge.minScore)
 
   const handleMint = () => {
     setMinting(true)
@@ -22,27 +31,15 @@ export function MintNFT({ score, walletAddress }: MintNFTProps) {
     // Simulate minting process
     setTimeout(() => {
       setMinting(false)
-      setMinted(true)
+      onMint(selectedBadge)
     }, 2000)
   }
-
-  // Generate badge tier based on score
-  const getBadgeTier = () => {
-    if (score >= 700) return { name: "Diamond", color: "bg-blue-500" }
-    if (score >= 600) return { name: "Platinum", color: "bg-slate-400" }
-    if (score >= 500) return { name: "Gold", color: "bg-yellow-500" }
-    if (score >= 400) return { name: "Silver", color: "bg-gray-400" }
-    return { name: "Bronze", color: "bg-amber-700" }
-  }
-
-  const badgeTier = getBadgeTier()
 
   // Function to download NFT as image
   const downloadNFT = () => {
     if (!nftRef.current) return
 
     // We're using a simple approach to create an image from HTML
-    // In a production app, you'd use a more robust solution like html2canvas
     const nftElement = nftRef.current
 
     // Create a canvas element
@@ -71,8 +68,9 @@ export function MintNFT({ score, walletAddress }: MintNFTProps) {
       ctx.fillText(score.toString(), canvas.width / 2, canvas.height / 2)
 
       // Draw badge tier
+      const currentBadge = badges.find((b) => b.id === selectedBadge) || badges[0]
       ctx.font = "bold 30px sans-serif"
-      ctx.fillText(badgeTier.name + " Tier", canvas.width / 2, canvas.height / 2 + 60)
+      ctx.fillText(currentBadge.name + " Badge", canvas.width / 2, canvas.height / 2 + 60)
 
       // Draw wallet address
       ctx.font = "20px monospace"
@@ -85,11 +83,13 @@ export function MintNFT({ score, walletAddress }: MintNFTProps) {
       // Convert to image and trigger download
       const dataUrl = canvas.toDataURL("image/png")
       const link = document.createElement("a")
-      link.download = `polkascore-${score}-${badgeTier.name.toLowerCase()}.png`
+      link.download = `polkascore-${score}-${currentBadge.name.toLowerCase()}.png`
       link.href = dataUrl
       link.click()
     }
   }
+
+  const selectedBadgeData = badges.find((b) => b.id === selectedBadge) || badges[0]
 
   return (
     <Card>
@@ -98,47 +98,76 @@ export function MintNFT({ score, walletAddress }: MintNFTProps) {
         <CardDescription>Create a permanent record of your PolkaScore on Asset Hub</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-col md:flex-row gap-8 items-center">
-          <div
-            ref={nftRef}
-            className="relative aspect-square w-full max-w-[240px] rounded-lg bg-gradient-to-br from-[#E6007A] to-[#6D3AEE] p-1"
-          >
-            <div className="absolute inset-0 bg-card m-[3px] rounded-[6px]"></div>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-              <div className="text-sm font-medium text-muted-foreground mb-1">PolkaScore</div>
-              <div className="text-5xl font-bold mb-2">{score}</div>
-              <Badge className={`${badgeTier.color} text-white mb-4`}>{badgeTier.name}</Badge>
-              <div className="text-xs text-muted-foreground">
-                Wallet: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">{new Date().toLocaleDateString()}</div>
-            </div>
-          </div>
+        <Tabs
+          defaultValue={availableBadges.length > 0 ? availableBadges[0].id : "bronze"}
+          onValueChange={setSelectedBadge}
+          className="mb-6"
+        >
+          <TabsList className="grid grid-cols-3">
+            {badges.map((badge) => (
+              <TabsTrigger
+                key={badge.id}
+                value={badge.id}
+                disabled={score < badge.minScore}
+                className={mintedBadges.includes(badge.id) ? "relative" : ""}
+              >
+                {badge.name}
+                {mintedBadges.includes(badge.id) && (
+                  <span className="absolute -top-1 -right-1 size-4 bg-green-500 rounded-full flex items-center justify-center">
+                    <Check className="size-3 text-white" />
+                  </span>
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-          <div className="flex-1 space-y-4">
-            <div className="space-y-2">
-              <h3 className="text-lg font-medium">NFT Benefits</h3>
-              <ul className="space-y-2">
-                <li className="flex items-start gap-2">
-                  <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
-                  <span>Permanent record of your credit score on-chain</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
-                  <span>Showcase your blockchain reputation to DeFi protocols</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
-                  <span>Potential benefits from partner protocols and services</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
-                  <span>Historical tracking of your score improvements</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
+          {badges.map((badge) => (
+            <TabsContent key={badge.id} value={badge.id} className="pt-4">
+              <div className="flex flex-col md:flex-row gap-8 items-center">
+                <div
+                  ref={nftRef}
+                  className={`relative aspect-square w-full max-w-[240px] rounded-lg ${badge.color} p-1`}
+                >
+                  <div className="absolute inset-0 bg-card m-[3px] rounded-[6px]"></div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+                    <div className="text-sm font-medium text-muted-foreground mb-1">PolkaScore</div>
+                    <div className="text-5xl font-bold mb-2">{score}</div>
+                    <div className="text-4xl mb-2">{badge.icon}</div>
+                    <Badge className={`${badge.color} ${badge.textColor} mb-4`}>{badge.name}</Badge>
+                    <div className="text-xs text-muted-foreground">
+                      Wallet: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">{new Date().toLocaleDateString()}</div>
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-4">
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-medium">{badge.name} Badge Benefits</h3>
+                    <ul className="space-y-2">
+                      <li className="flex items-start gap-2">
+                        <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
+                        <span>Permanent record of your {badge.name} tier achievement</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
+                        <span>Showcase your blockchain reputation to DeFi protocols</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
+                        <span>Access to {badge.name}-tier benefits in partner protocols</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Check className="size-5 text-green-500 shrink-0 mt-0.5" />
+                        <span>Historical tracking of your score improvements</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
       </CardContent>
       <CardFooter className="flex justify-center md:justify-end gap-4">
         <Button variant="outline" onClick={downloadNFT}>
@@ -147,21 +176,21 @@ export function MintNFT({ score, walletAddress }: MintNFTProps) {
         </Button>
         <Button
           onClick={handleMint}
-          disabled={minting || minted}
-          className="bg-gradient-to-r from-[#E6007A] to-[#6D3AEE] hover:opacity-90 transition-opacity"
+          disabled={minting || score < selectedBadgeData.minScore || mintedBadges.includes(selectedBadge)}
+          className={`${selectedBadgeData.color} hover:opacity-90 transition-opacity`}
         >
           {minting ? (
             <>
               <CircleDashed className="mr-2 h-4 w-4 animate-spin" />
               Minting...
             </>
-          ) : minted ? (
+          ) : mintedBadges.includes(selectedBadge) ? (
             <>
               <Check className="mr-2 h-4 w-4" />
-              Minted Successfully
+              Already Minted
             </>
           ) : (
-            "Mint as NFT"
+            `Mint ${selectedBadgeData.name} Badge`
           )}
         </Button>
       </CardFooter>
