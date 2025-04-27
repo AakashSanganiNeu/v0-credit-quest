@@ -1,10 +1,7 @@
 import contractABI from "./DeFiQuestNFT.json"
 
-// Contract address from environment variable or use the new address directly
-const CONTRACT_ADDRESS =
-  typeof window !== "undefined"
-    ? process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
-    : "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
+// Hardcoded contract address
+const CONTRACT_ADDRESS = "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
 
 // Badge metadata URIs (in a real app, these would be IPFS links)
 const BADGE_URIS = {
@@ -33,8 +30,8 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
 
     const userAddress = accounts[0]
 
-    // Create a provider - using ethers v5 syntax
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    // Create a provider - using ethers v5 syntax with proper dynamic import
+    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
 
     // Get the network to verify we're on the right chain
     const network = await provider.getNetwork()
@@ -53,7 +50,7 @@ export async function mintNFTBadge(badgeType: string): Promise<{ success: boolea
     console.log("Contract exists at address:", CONTRACT_ADDRESS)
 
     // Create contract instance
-    const nftContract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer)
+    const nftContract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractABI, signer)
 
     // Get the badge URI based on the badge type
     const badgeUri = BADGE_URIS[badgeType as keyof typeof BADGE_URIS]
@@ -128,11 +125,11 @@ export async function getNFTCount(): Promise<number> {
     // Import ethers dynamically to avoid SSR issues
     const ethers = await import("ethers")
 
-    // Create a provider - using ethers v5 syntax
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    // Create a provider - using ethers v5 syntax with proper dynamic import
+    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
 
     // Create contract instance (read-only)
-    const nftContract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
+    const nftContract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
 
     // Try to get the token count - the updated contract has tokenCount
     try {
@@ -204,7 +201,7 @@ export async function fetchUserNFTs() {
     const ethers = await import("ethers")
 
     // Connect to MetaMask
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
 
     // Request account access if needed
     await window.ethereum.request({ method: "eth_requestAccounts" })
@@ -214,7 +211,7 @@ export async function fetchUserNFTs() {
     console.log("Fetching NFTs for address:", userAddress)
 
     // Create contract instance
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
+    const contract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
 
     const userNFTs = []
     const maxTokensToCheck = 100 // Adjust based on your expected total NFTs minted
@@ -271,12 +268,12 @@ export async function isContractOwner(): Promise<boolean> {
     const ethers = await import("ethers")
 
     // Connect to MetaMask
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
     const signer = provider.getSigner()
     const userAddress = await signer.getAddress()
 
     // Create contract instance
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
+    const contract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractABI, provider)
 
     try {
       // Get the contract owner
@@ -312,7 +309,7 @@ export async function getContractDetails() {
     const ethers = await import("ethers")
 
     // Connect to MetaMask
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
+    const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
     const network = await provider.getNetwork()
 
     // Get the code at the contract address

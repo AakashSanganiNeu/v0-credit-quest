@@ -8,6 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ExternalLink, AlertTriangle } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
+// Hardcoded contract address
+const CONTRACT_ADDRESS = "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
+
 interface NFT {
   tokenId: number
   tokenUri: string
@@ -34,7 +37,12 @@ export function UserNFTs() {
       }
     }
 
-    loadNFTs()
+    if (typeof window !== "undefined" && window.ethereum) {
+      loadNFTs()
+    } else {
+      setLoading(false)
+      setError("MetaMask is not installed")
+    }
   }, [])
 
   // Function to determine badge type from URI
@@ -87,7 +95,7 @@ export function UserNFTs() {
                     </h3>
                     <div className="flex items-center mt-1">
                       <a
-                        href={`https://moonbase.moonscan.io/token/${process.env.NEXT_PUBLIC_CONTRACT_ADDRESS}?a=${nft.tokenId}`}
+                        href={`https://moonbase.moonscan.io/token/${CONTRACT_ADDRESS}?a=${nft.tokenId}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-xs text-primary flex items-center"

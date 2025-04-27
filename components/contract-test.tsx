@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertTriangle, Info } from "lucide-react"
 
+// Hardcoded contract address
+const CONTRACT_ADDRESS = "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
+
 export function ContractTest() {
   const [testing, setTesting] = useState(false)
   const [result, setResult] = useState<string | null>(null)
@@ -17,38 +20,35 @@ export function ContractTest() {
     setResult(null)
 
     try {
-      if (!window.ethereum) {
+      if (typeof window === "undefined" || !window.ethereum) {
         throw new Error("MetaMask is not installed")
       }
 
       // Import ethers dynamically to avoid SSR issues
       const ethers = await import("ethers")
 
-      // Get the contract address from environment variable
-      const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
-
       // Create a provider
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
 
       // Get the network
       const network = await provider.getNetwork()
 
       // Check if the contract exists
-      const code = await provider.getCode(contractAddress)
+      const code = await provider.getCode(CONTRACT_ADDRESS)
       if (code === "0x") {
         throw new Error(
-          `No contract found at address ${contractAddress} on network ${network.name} (${network.chainId})`,
+          `No contract found at address ${CONTRACT_ADDRESS} on network ${network.name} (${network.chainId})`,
         )
       }
 
       // Create a simple contract interface with just the functions we want to test
-      const contractInterface = new ethers.utils.Interface([
+      const contractInterface = new ethers.ethers.utils.Interface([
         "function name() view returns (string)",
         "function tokenCount() view returns (uint256)",
       ])
 
       // Create contract instance
-      const contract = new ethers.Contract(contractAddress, contractInterface, provider)
+      const contract = new ethers.ethers.Contract(CONTRACT_ADDRESS, contractInterface, provider)
 
       // Test calling name()
       const name = await contract.name()

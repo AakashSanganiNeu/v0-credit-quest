@@ -7,9 +7,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { isContractOwner, getNFTCount, getContractDetails } from "@/lib/nft-service"
 import { AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react"
 
+// Hardcoded contract address
+const CONTRACT_ADDRESS = "0xbfba3bca253b48b3f3f79fc1446ff3049082869b"
+
 export function ContractDebug() {
   const [isOwner, setIsOwner] = useState<boolean | null>(null)
-  const [contractAddress, setContractAddress] = useState<string>("")
+  const [contractAddress, setContractAddress] = useState<string>(CONTRACT_ADDRESS)
   const [userAddress, setUserAddress] = useState<string>("")
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -18,7 +21,7 @@ export function ContractDebug() {
   const [contractDetails, setContractDetails] = useState<any>(null)
 
   useEffect(() => {
-    setContractAddress(process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "0xbfba3bca253b48b3f3f79fc1446ff3049082869b")
+    setContractAddress(CONTRACT_ADDRESS)
   }, [])
 
   const checkOwnership = async () => {
@@ -26,7 +29,7 @@ export function ContractDebug() {
     setError(null)
 
     try {
-      if (!window.ethereum) {
+      if (typeof window === "undefined" || !window.ethereum) {
         throw new Error("MetaMask is not installed")
       }
 
@@ -57,8 +60,8 @@ export function ContractDebug() {
       // Get contract info
       try {
         const ethers = await import("ethers")
-        const provider = new ethers.providers.Web3Provider(window.ethereum)
-        const contract = new ethers.Contract(
+        const provider = new ethers.ethers.providers.Web3Provider(window.ethereum)
+        const contract = new ethers.ethers.Contract(
           contractAddress,
           [
             "function name() view returns (string)",
