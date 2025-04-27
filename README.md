@@ -3,20 +3,40 @@
 PolkaScore is a web application that calculates a credit score for Polkadot wallet addresses based on on-chain activity such as staking, transfers, governance participation, and NFT badges.
 
 ![PolkaScore Screenshot](https://github.com/yourusername/polkascore/raw/main/public/screenshot.png)
-# DeFiQuestNFT
+# DeFiQuestNFT Smart Contract
 
-A custom NFT smart contract for awarding DeFi achievement badges, built in Solidity and deployed on **Moonbase Alpha** (Polkadot parachain).
+The **DeFiQuestNFT** smart contract is a custom NFT (Non-Fungible Token) contract built using Solidity and deployed on the **Moonbase Alpha** network, a Polkadot parachain.
 
-## 🚀 How It Works
+## 🎯 Core Purpose
 
-- **Purpose:** Mint unique NFTs ("badges") for users completing DeFi quests.
-- **Inherits:** 
-  - `ERC721URIStorage` - NFT storage with metadata URIs.
-  - `Ownable` - Admin control over the contract.
-- **Key Function:** `mintBadge(address to, string badgeUri)`
-  - Safely mints an NFT to `to` address.
-  - Sets metadata URI for the badge.
-  - Increments total token count.
+- Mint unique NFT "badges" for users participating in DeFi quests or achievements.
+
+## 🧩 Inherits From
+
+- **ERC721URIStorage**: Provides standard ERC-721 functionality with URI storage for each NFT.
+- **Ownable**: Restricts contract ownership (admin rights) to a specific address.
+
+## 🛠️ Key Components
+
+- **tokenCount (public variable):**
+  - Tracks the total number of NFTs minted.
+  - Auto-increments with each new NFT.
+
+- **Constructor:**
+  - Initializes the ERC721 token with:
+    - Name: `DeFiQuestNFT`
+    - Symbol: `DQN`
+  - Sets the initial contract owner using OpenZeppelin's `Ownable` pattern.
+
+- **mintBadge(address to, string memory badgeUri):**
+  - Accepts:
+    - `to` address (recipient of the NFT).
+    - `badgeUri` (a URI link to the NFT metadata).
+  - Increments the `tokenCount`.
+  - Safely mints a new NFT using `_safeMint`.
+  - Associates the newly minted token with a metadata URI via `_setTokenURI`.
+  - Returns the newly minted token ID.
+
 
 ## 🌐 Deployment Info
 
